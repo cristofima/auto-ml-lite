@@ -1,4 +1,4 @@
-# 🚀 auto-ml-lite
+# 🚀 AutoML Lite
 
 A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, and export high-performance machine learning models with just 3 lines of code.
 
@@ -7,108 +7,87 @@ A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, 
 
 ## ✨ Features
 
-- **3-Line API**: Designed for simplicity and speed.
+- **3-Line API**: Designed for simplicity and speed across 4 different ML tasks.
 - **Serverless-First**: Optimized for AWS Lambda/Azure Functions and low-memory environments.
-- **Premium Reports**: Professional HTML/CSS reports for EDA and Training diagnostics (no external JS dependencies).
-- **Automated Preprocessing**: Smart detection of problem types, missing value imputation, and categorical encoding.
+- **Premium Reports**: Professional HTML/CSS reports for all tasks (No external JS or Internet required).
+- **Comprehensive Analytics**: Supports Regression, Classification, Clustering, and Anomaly Detection.
 - **ONNX Export**: One-click export for cross-platform deployment.
-- **Modern Stack**: Powered by FLAML, LightGBM, XGBoost, and Scikit-Learn.
 
 ---
 
 ## 📦 Installation
 
-Install the core package:
-```bash
-pip install auto-ml-lite
-```
-
-Install with all features (Reporting & ONNX Export):
 ```bash
 pip install "auto-ml-lite[all]"
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 The 4 Core Modules
 
-### Regression Example
+### 1. Regression
+Automated training with residual analysis and error diagnostics.
 ```python
 from auto_ml_lite import AutoML
-import pandas as pd
-from sklearn.datasets import load_diabetes
-
-# 1. Load your data
-data = load_diabetes()
-df = pd.DataFrame(data.data, columns=data.feature_names)
-df['target'] = data.target
-
-# 2. Fit the model (The "3-Line" magic)
-aml = AutoML(target="target", time_budget=60)
-aml.fit(df)
-
-# 3. Generate a premium report
-aml.report("training_results.html")
+aml = AutoML(target="target").fit(df)
+aml.report("regression_report.html")
 ```
 
-### Classification Example
+### 2. Classification
+Visual Confusion Matrices and detailed class-wise performance metrics.
 ```python
 from auto_ml_lite import AutoML
-from sklearn.datasets import load_breast_cancer
+aml = AutoML(target="label").fit(df)
+aml.report("classification_report.html")
+```
 
-data = load_breast_cancer()
-aml = AutoML(target="target", time_budget=30).fit(pd.DataFrame(data.data, columns=data.feature_names).assign(target=data.target))
-aml.report("classification_diagnostics.html")
+### 3. Clustering (Unsupervised)
+Automated optimal K-search using Silhouette and Calinski-Harabasz scores.
+```python
+from auto_ml_lite import AutoCluster
+ac = AutoCluster(max_clusters=8).fit(df)
+ac.report("clustering_report.html")
+```
+
+### 4. Anomaly Detection
+Profile-based detection using Isolation Forest with detailed sample analysis.
+```python
+from auto_ml_lite import AutoAnomaly
+aa = AutoAnomaly(contamination=0.05).fit(df)
+aa.report("anomaly_report.html")
 ```
 
 ---
 
-## 🛠️ Key Capabilities
+## 📂 Examples & Scripts
 
-### 🔍 Automated EDA
-Generate comprehensive Exploratory Data Analysis reports before training:
-```python
-aml.eda(df, output_path="eda_report.html")
-```
+Check the `examples/` directory for full implementation scripts:
+- `examples/regression_example.py`
+- `examples/classification_example.py`
+- `examples/clustering_example.py`
+- `examples/anomaly_example.py`
 
-### 📉 Diagnostic Visualizations
-- **Regression**: Residual distribution histograms and actual vs. predicted tables.
-- **Classification**: Visual Confusion Matrices (CSS heatmaps) and class-wise performance breakdown.
+---
 
-### 🌐 Cross-Platform Export
-Export your model to ONNX format for high-speed inference in any language:
-```python
-aml.export_onnx("model.onnx")
-```
+## 🛠️ Performance & Export
+
+- **ONNX Export**: Cross-platform models in one line: `aml.export_onnx("model.onnx")`.
+- **EDA**: Generate pre-training analysis: `aml.eda(df, "eda.html")`.
+- **UUIDs**: Every training session generates a unique ID for easy tracking.
 
 ---
 
 ## 🗺️ Roadmap
 
 - [x] Core Package Refactor
-- [x] Premium Reports (CSS-only)
-- [x] ONNX Export Native Support
-- [ ] **AutoCluster**: Automated unsupervised clustering.
-- [ ] **AutoAnomaly**: Advanced outlier and anomaly detection.
-- [ ] PyPI Automated Release Workflow.
+- [x] Premium CSS-only Reports
+- [x] AutoCluster & AutoAnomaly implementation
+- [x] Cross-platform ONNX support
+- [ ] PyPI Automated Release Workflow
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contributing & License
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-*Created by [Cristopher Coronado](https://github.com/cristofima)*
+Created by [Cristopher Coronado](https://github.com/cristofima). 
+Distributed under the MIT License.
