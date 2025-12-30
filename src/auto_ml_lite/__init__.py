@@ -13,7 +13,20 @@ from auto_ml_lite.core.exporter import export_model_to_onnx
 from auto_ml_lite.reports.eda import generate_eda_report
 from auto_ml_lite.reports.training import generate_training_report
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version as _version, PackageNotFoundError as _PackageNotFoundError
+except ImportError:
+    # For Python < 3.8
+    from importlib_metadata import version as _version, PackageNotFoundError as _PackageNotFoundError
+
+try:
+    __version__ = _version("auto-ml-lite")
+except _PackageNotFoundError:
+    # Package is not installed
+    try:
+        from ._version import version as __version__
+    except ImportError:
+        __version__ = "unknown"
 
 class AutoML:
     """
