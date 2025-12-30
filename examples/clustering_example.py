@@ -1,7 +1,6 @@
 import pandas as pd
-from auto_ml_lite import AutoCluster
+from ez_automl_lite import AutoCluster
 from sklearn.datasets import load_iris
-import os
 
 def test_clustering():
     print("\n--- Testing Automated Clustering on Iris Dataset ---")

@@ -4,13 +4,13 @@ Automated Clustering Module.
 
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.preprocessing import StandardScaler
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Optional
 import time
 import uuid
-from auto_ml_lite.reports.cluster_report import generate_cluster_report
+from ez_automl_lite.reports.cluster_report import generate_cluster_report
 
 class AutoCluster:
     """

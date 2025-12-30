@@ -1,4 +1,4 @@
-# auto-ml-lite
+# ez-automl-lite
 
 A lightweight AutoML library for Python, optimized for simplicity and cross-platform deployment.
 
@@ -13,18 +13,18 @@ A lightweight AutoML library for Python, optimized for simplicity and cross-plat
 ## Installation
 
 ```bash
-pip install auto-ml-lite
+pip install ez-automl-lite
 ```
 
 For ONNX support:
 ```bash
-pip install auto-ml-lite[onnx]
+pip install ez-automl-lite[onnx]
 ```
 
 ## Quick Start
 
 ```python
-from auto_ml_lite import AutoML
+from ez_automl_lite import AutoML
 import pandas as pd
 
 # 1. Load data

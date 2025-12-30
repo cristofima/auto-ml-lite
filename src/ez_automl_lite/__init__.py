@@ -1,5 +1,5 @@
 """
-auto-ml-lite: A lightweight AutoML library for Python.
+ez-automl-lite: A lightweight AutoML library for Python.
 """
 
 import pandas as pd
@@ -7,11 +7,13 @@ import joblib
 import uuid
 from typing import Optional
 
-from auto_ml_lite.core.preprocessor import AutoPreprocessor
-from auto_ml_lite.core.trainer import train_automl_model
-from auto_ml_lite.core.exporter import export_model_to_onnx
-from auto_ml_lite.reports.eda import generate_eda_report
-from auto_ml_lite.reports.training import generate_training_report
+from ez_automl_lite.core.preprocessor import AutoPreprocessor
+from ez_automl_lite.core.cluster import AutoCluster
+from ez_automl_lite.core.anomaly import AutoAnomaly
+from ez_automl_lite.core.trainer import train_automl_model
+from ez_automl_lite.core.exporter import export_model_to_onnx
+from ez_automl_lite.reports.eda import generate_eda_report
+from ez_automl_lite.reports.training import generate_training_report
 
 try:
     from importlib.metadata import version as _version, PackageNotFoundError as _PackageNotFoundError
@@ -20,7 +22,7 @@ except ImportError:
     from importlib_metadata import version as _version, PackageNotFoundError as _PackageNotFoundError
 
 try:
-    __version__ = _version("auto-ml-lite")
+    __version__ = _version("ez-automl-lite")
 except _PackageNotFoundError:
     # Package is not installed
     try:

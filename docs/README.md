@@ -1,6 +1,6 @@
 # Technical Documentation
 
-This directory contains technical details for the **auto-ml-lite** engine.
+This directory contains technical details for the **ez-automl-lite** engine.
 
 ## Core Capabilities
 
@@ -23,7 +23,7 @@ The `AutoML` class handles both **Regression** and **Classification**.
 ## Shared Infrastructure
 
 ### Premium Diagnostics
-All reports are generated in `src/auto_ml_lite/reports/`. They use **zero external dependencies** (no Javascript libraries, no Google Fonts, no external CSS frameworks). This ensures:
+All reports are generated in `src/ez_automl_lite/reports/`. They use **zero external dependencies** (no Javascript libraries, no Google Fonts, no external CSS frameworks). This ensures:
 1. **Security**: No scripts are executed in the browser.
 2. **Speed**: Reports open instantly.
 3. **Portability**: Reports render perfectly in offline environments or air-gapped systems.
