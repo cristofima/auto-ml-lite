@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "auto-ml-lite"
-version = "0.1.0"
+dynamic = ["version"]
 authors = [
   { name="Cristopher Coronado", email="cgcoronadom@gmail.com" },
 ]
@@ -16,6 +16,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+license = {text = "MIT"}
+
+[project.urls]
+Homepage = "https://github.com/cristofima/auto-ml-lite"
+Issues = "https://github.com/cristofima/auto-ml-lite/issues"
+Repository = "https://github.com/cristofima/auto-ml-lite"
 dependencies = [
     "flaml[automl]>=2.3.6",
     "pandas>=2.2.0",
@@ -42,3 +48,6 @@ all = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
+write_to = "src/auto_ml_lite/_version.py"
