@@ -2,10 +2,10 @@
 auto-ml-lite: A lightweight AutoML library for Python.
 """
 
-import os
 import pandas as pd
 import joblib
-from typing import Optional, Dict, Any
+import uuid
+from typing import Optional
 
 from auto_ml_lite.core.preprocessor import AutoPreprocessor
 from auto_ml_lite.core.trainer import train_automl_model
@@ -20,7 +20,7 @@ class AutoML:
     Main entry point for auto-ml-lite.
     """
     
-    def __init__(self, target: str, time_budget: int = 300):
+    def __init__(self, target: str, time_budget: int = 300, job_id: Optional[str] = None):
         self.target = target
         self.time_budget = time_budget
         self.preprocessor = AutoPreprocessor(target)
@@ -29,7 +29,9 @@ class AutoML:
         self.feature_importance = None
         self.problem_type = None
         self.dataset_info = {}
-        self.job_id = "local_job"
+        self.job_id = job_id or str(uuid.uuid4())
+        self.y_test = None
+        self.y_pred = None
 
     def fit(self, df: pd.DataFrame):
         """
