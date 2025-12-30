@@ -1,5 +1,5 @@
 import pandas as pd
-from auto_ml_lite import AutoML
+from ez_automl_lite import AutoML
 from sklearn.datasets import load_diabetes
 
 def test_regression():

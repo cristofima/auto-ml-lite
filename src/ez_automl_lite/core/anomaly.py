@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from typing import Optional
 import time
 import uuid
-from auto_ml_lite.reports.anomaly_report import generate_anomaly_report
+from ez_automl_lite.reports.anomaly_report import generate_anomaly_report
 
 class AutoAnomaly:
     """

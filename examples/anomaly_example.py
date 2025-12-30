@@ -1,6 +1,5 @@
 import pandas as pd
-import numpy as np
-from auto_ml_lite import AutoAnomaly
+from ez_automl_lite import AutoAnomaly
 from sklearn.datasets import load_wine
 
 def test_anomaly_detection():

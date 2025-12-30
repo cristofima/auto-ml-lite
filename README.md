@@ -1,4 +1,4 @@
-# 🚀 AutoML Lite
+# 🚀 ez-automl-lite
 
 A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, and export high-performance machine learning models with just 3 lines of code.
 
@@ -18,7 +18,7 @@ A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, 
 ## 📦 Installation
 
 ```bash
-pip install "auto-ml-lite[all]"
+pip install "ez-automl-lite[all]"
 ```
 
 ---
@@ -28,7 +28,7 @@ pip install "auto-ml-lite[all]"
 ### 1. Regression
 Automated training with residual analysis and error diagnostics.
 ```python
-from auto_ml_lite import AutoML
+from ez_automl_lite import AutoML
 aml = AutoML(target="target").fit(df)
 aml.report("regression_report.html")
 ```
@@ -36,7 +36,7 @@ aml.report("regression_report.html")
 ### 2. Classification
 Visual Confusion Matrices and detailed class-wise performance metrics.
 ```python
-from auto_ml_lite import AutoML
+from ez_automl_lite import AutoML
 aml = AutoML(target="label").fit(df)
 aml.report("classification_report.html")
 ```
@@ -44,7 +44,7 @@ aml.report("classification_report.html")
 ### 3. Clustering (Unsupervised)
 Automated optimal K-search using Silhouette and Calinski-Harabasz scores.
 ```python
-from auto_ml_lite import AutoCluster
+from ez_automl_lite import AutoCluster
 ac = AutoCluster(max_clusters=8).fit(df)
 ac.report("clustering_report.html")
 ```
@@ -52,7 +52,7 @@ ac.report("clustering_report.html")
 ### 4. Anomaly Detection
 Profile-based detection using Isolation Forest with detailed sample analysis.
 ```python
-from auto_ml_lite import AutoAnomaly
+from ez_automl_lite import AutoAnomaly
 aa = AutoAnomaly(contamination=0.05).fit(df)
 aa.report("anomaly_report.html")
 ```
