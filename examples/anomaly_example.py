@@ -32,10 +32,14 @@ def test_anomaly_detection():
     print(f"Anomalies found: {aa.metrics.get('anomaly_count')}")
     print(f"Anomaly Percentage: {aa.metrics.get('anomaly_percentage'):.2f}%")
     
-    # 4. Generate Report
-    report_name = "wine_anomaly_report.html"
+    # 4. Generate Reports
+    eda_report_name = "wine_anomaly_eda_report.html"
+    aa.eda(df, eda_report_name)
+    print(f"EDA report generated: {eda_report_name}")
+
+    report_name = "wine_anomaly_training_report.html"
     aa.report(report_name)
-    print(f"Anomaly report generated: {report_name}")
+    print(f"Anomaly training report generated: {report_name}")
     
     # 5. Predict
     # The last 5 rows should be detected as -1

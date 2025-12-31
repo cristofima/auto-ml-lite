@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
+from sklearn.metrics import roc_curve, auc
 
 
 def generate_training_report(
@@ -18,7 +19,8 @@ def generate_training_report(
     preprocessing_info: Dict[str, Any],
     dataset_info: Dict[str, Any],
     y_test: Optional[pd.Series] = None,
-    y_pred: Optional[np.ndarray] = None
+    y_pred: Optional[np.ndarray] = None,
+    y_pred_proba: Optional[np.ndarray] = None
 ) -> None:
     """Generate training results report."""
     print("Generating training report...")
@@ -32,7 +34,8 @@ def generate_training_report(
             preprocessing_info=preprocessing_info,
             dataset_info=dataset_info,
             y_test=y_test,
-            y_pred=y_pred
+            y_pred=y_pred,
+            y_pred_proba=y_pred_proba
         )
         html = report.generate()
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -57,7 +60,8 @@ class TrainingReportGenerator:
         preprocessing_info: Dict[str, Any],
         dataset_info: Dict[str, Any],
         y_test: Optional[pd.Series] = None,
-        y_pred: Optional[np.ndarray] = None
+        y_pred: Optional[np.ndarray] = None,
+        y_pred_proba: Optional[np.ndarray] = None
     ) -> None:
         self.job_id = job_id
         self.problem_type = problem_type
@@ -68,6 +72,7 @@ class TrainingReportGenerator:
         self.dataset_info = dataset_info
         self.y_test = y_test
         self.y_pred = y_pred
+        self.y_pred_proba = y_pred_proba
     
     def _get_css(self) -> str:
         """Return premium CSS styles"""
@@ -151,6 +156,13 @@ class TrainingReportGenerator:
                 background: #333; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;
             }
             
+            .chart-container { position: relative; height: 300px; width: 100%; border: 1px solid #eee; background: white; border-radius: 8px; margin-top: 20px; }
+            .chart-svg { width: 100%; height: 100%; }
+            .chart-line { fill: none; stroke: #1a73e8; stroke-width: 3; vector-effect: non-scaling-stroke; }
+            .chart-area { fill: rgba(26, 115, 232, 0.1); }
+            .chart-axis { stroke: #ddd; stroke-width: 1; }
+            .chart-label { font-size: 12px; fill: #666; }
+            
             .matrix-container { display: flex; justify_content: center; margin-top: 20px; }
             .matrix { display: grid; gap: 8px; max-width: 600px; width: 100%; position: relative; }
             .matrix-cell { aspect-ratio: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; position: relative; overflow: hidden; }
@@ -171,6 +183,7 @@ class TrainingReportGenerator:
         training_time = self.metrics.get('training_time', 0)
         best_model = self.metrics.get('best_estimator', 'N/A')
         feature_count = self.preprocessing_info.get('feature_count', 'N/A')
+        time_budget = self.metrics.get('time_budget', 'N/A')
         
         return f"""
         <div class="card">
@@ -188,8 +201,8 @@ class TrainingReportGenerator:
                     <div class="stat-label">Best Estimator</div>
                 </div>
                 <div class="stat-box gold">
-                    <div class="stat-number">{feature_count}</div>
-                    <div class="stat-label">Features</div>
+                    <div class="stat-number">{time_budget}s</div>
+                    <div class="stat-label">Time Budget</div>
                 </div>
             </div>
             <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
@@ -205,14 +218,36 @@ class TrainingReportGenerator:
     def _generate_metrics(self) -> str:
         html = '<div class="card"><h2>📊 Performance Metrics</h2><div class="grid">'
         if self.problem_type == 'classification':
-            met_list = [('accuracy', 'Accuracy', 'success'), ('f1_score', 'F1 Score', 'success'), 
-                        ('precision', 'Precision', 'info'), ('recall', 'Recall', 'info')]
+            met_list = [
+                ('accuracy', 'Accuracy', 'success'), 
+                ('f1_score', 'F1 Score', 'success'), 
+                ('roc_auc', 'ROC AUC', 'primary'),
+                ('log_loss', 'Log Loss', 'warning'),
+                ('precision', 'Precision', 'info'), 
+                ('recall', 'Recall', 'info')
+            ]
         else:
-            met_list = [('r2_score', 'R² Score (Variance)', 'success'), ('rmse', 'Root Mean Squared Error', 'warning'), ('mae', 'Mean Absolute Error', 'warning')]
+            met_list = [
+                ('r2_score', 'R² Score (Variance)', 'success'), 
+                ('rmse', 'Root Mean Squared Error', 'warning'), 
+                ('mae', 'Mean Absolute Error', 'warning'),
+                ('mape', 'Mean Abs % Error (MAPE)', 'info')
+            ]
             
         for key, label, cls in met_list:
+            if key not in self.metrics: continue
+            
             val = self.metrics.get(key, 0)
-            val_str = f"{val:.2%}" if (key == 'r2_score' or "score" in key or key == "accuracy") else f"{val:.4f}"
+            
+            # Format logic
+            if key == 'mape':
+                val_str = f"{val:.2%}"
+            elif key in ['r2_score', 'accuracy', 'roc_auc']:
+                val_str = f"{val:.2%}" # Show as percentage-like for consistency or standard? Usually AUC is 0.xx. Let's do 0.95 (95%)
+                val_str = f"{val:.4f}"
+            else:
+                val_str = f"{val:.4f}"
+                
             html += f"""
             <div class="metric-card {cls}">
                 <div class="metric-value">{val_str}</div>
@@ -281,8 +316,49 @@ class TrainingReportGenerator:
         html += '</table></div>'
         return html
 
+    def _generate_roc_curve(self) -> str:
+        """Generate SVG ROC Curve"""
+        if self.y_test is None or self.y_pred_proba is None: return ""
+        if len(np.unique(self.y_test)) > 2: return "<p>ROC Curve is only available for binary classification.</p>"
+        
+        try:
+            # Assuming binary
+            fpr, tpr, _ = roc_curve(self.y_test, self.y_pred_proba[:, 1])
+            roc_auc = auc(fpr, tpr)
+            
+            # Create SVG path
+            # ViewBox 0 0 100 100. Flip Y axis logic (1-y)
+            path_d = "M 0 100 "
+            for f, t in zip(fpr, tpr):
+                path_d += f"L {f*100:.1f} {(1-t)*100:.1f} "
+            path_d += "L 100 0" # End
+            
+            svg = f"""
+            <div class="chart-container">
+                <svg class="chart-svg" viewBox="-5 -5 110 115" preserveAspectRatio="none">
+                    <!-- Grid -->
+                    <line x1="0" y1="0" x2="0" y2="100" class="chart-axis" />
+                    <line x1="0" y1="100" x2="100" y2="100" class="chart-axis" />
+                    <line x1="0" y1="0" x2="100" y2="0" class="chart-axis" stroke-dasharray="2,2" />
+                    <line x1="100" y1="0" x2="100" y2="100" class="chart-axis" stroke-dasharray="2,2" />
+                    <line x1="0" y1="100" x2="100" y2="0" class="chart-axis" stroke-dasharray="2,2" stroke="#ccc" />
+                    
+                    <!-- Labels -->
+                    <text x="50" y="112" text-anchor="middle" class="chart-label">False Positive Rate</text>
+                    <text x="-5" y="55" text-anchor="middle" transform="rotate(-90, -5, 55)" class="chart-label">True Positive Rate</text>
+                    
+                    <!-- Curve -->
+                    <path d="{path_d}" class="chart-line" />
+                    <text x="60" y="80" style="font-size: 14px; font-weight: bold; fill: #1a73e8;">AUC = {roc_auc:.4f}</text>
+                </svg>
+            </div>
+            """
+            return svg
+        except Exception as e:
+            return f"<p>Could not generate ROC curve: {str(e)}</p>"
+
     def _generate_classification_diagnostics(self) -> str:
-        """Enhanced classification diagnostics: Confusion Matrix and class breakdown"""
+        """Enhanced classification diagnostics: Confusion Matrix, class breakdown, and ROC"""
         if self.y_test is None or self.y_pred is None: return ""
         
         from sklearn.metrics import confusion_matrix, classification_report
@@ -291,6 +367,10 @@ class TrainingReportGenerator:
         
         html = '<div class="card"><h2>🔬 Classification Diagnostics</h2>'
         
+        html += '<div class="grid-2">'
+        
+        # Left Column: Matrix
+        html += '<div>'
         if len(unique_labels) <= 6:
             html += '<h3>Confusion Matrix</h3><p style="font-size:0.85em; color:#666; margin-bottom:15px;">Predicted vs Actual classes.</p>'
             
@@ -311,6 +391,17 @@ class TrainingReportGenerator:
                     text_color = '#fff' if opacity > 0.5 else '#333'
                     html += f'<div class="matrix-cell" style="background: {bg_color}; color: {text_color};">{val}</div>'
                 html += '</div></div>'
+        html += '</div>'
+        
+        # Right Column: ROC Curve (if binary)
+        if len(unique_labels) == 2:
+            html += '<div><h3>ROC Curve</h3><p style="font-size:0.85em; color:#666;">Receiver Operating Characteristic (Binary Only).</p>'
+            html += self._generate_roc_curve()
+            html += '</div>'
+        else:
+             html += '<div><h3>Multiclass Details</h3><p>ROC Curve available for binary classification.</p></div>'
+             
+        html += '</div>' # End Grid-2
         
         # Performance by Class table
         html += '<h3 style="margin-top:30px;">Class-wise Performance</h3>'
@@ -379,3 +470,4 @@ class TrainingReportGenerator:
             </div>
         </div></body></html>
         """
+

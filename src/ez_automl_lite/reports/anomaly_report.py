@@ -1,9 +1,8 @@
 """
-Anomaly Detection Results Report Generator.
+Anomaly Detection Report Generator.
 """
 
 from typing import Dict, Any
-import numpy as np
 from datetime import datetime, timezone
 
 def generate_anomaly_report(
@@ -25,9 +24,7 @@ def generate_anomaly_report(
             f.write(html)
         print(f"Anomaly report saved to: {output_path}")
     except Exception as e:
-        import traceback
         print(f"Error generating anomaly report: {str(e)}")
-        traceback.print_exc()
 
 class AnomalyReportGenerator:
     """Generate anomaly detection results report with premium CSS-only visuals."""
@@ -46,9 +43,8 @@ class AnomalyReportGenerator:
                 margin: 0; padding: 20px; background: #f5f7fa; color: #333; line-height: 1.5;
             }
             .container { max-width: 1200px; margin: 0 auto; }
-            h1 { color: #d32f2f; border-bottom: 3px solid #d32f2f; padding-bottom: 10px; margin-bottom: 30px; }
-            h2 { color: #333; margin-top: 30px; border-left: 4px solid #d32f2f; padding-left: 10px; }
-            h3 { color: #555; margin-top: 20px; }
+            h1 { color: #d93025; border-bottom: 3px solid #d93025; padding-bottom: 10px; margin-bottom: 30px; }
+            h2 { color: #333; margin-top: 30px; border-left: 4px solid #d93025; padding-left: 10px; }
             
             .card {
                 background: white; border-radius: 8px; padding: 25px;
@@ -56,72 +52,124 @@ class AnomalyReportGenerator:
             }
             
             .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+            .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
             
             .stat-box {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white; padding: 20px; border-radius: 12px; text-align: center;
                 box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             }
-            .stat-box.red { background: linear-gradient(135deg, #d32f2f 0%, #ff5252 100%); box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3); }
-            .stat-box.blue { background: linear-gradient(135deg, #1976d2 0%, #448aff 100%); box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3); }
-            .stat-box.info { background: linear-gradient(135deg, #455a64 0%, #90a4ae 100%); box-shadow: 0 4px 15px rgba(69, 90, 100, 0.3); }
+            .stat-box.red { background: linear-gradient(135deg, #ff5f6d 0%, #ffc371 100%); box-shadow: 0 4px 15px rgba(255, 95, 109, 0.3); }
+            .stat-box.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3); }
+            .stat-box.gray { background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%); box-shadow: 0 4px 15px rgba(96, 108, 136, 0.3); }
             
-            .stat-number { font-size: 2.2em; font-weight: bold; }
+            .stat-number { font-size: 2.5em; font-weight: bold; }
             .stat-label { font-size: 0.9em; opacity: 0.9; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
             
-            table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
             th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
             th { background: #f8f9fa; font-weight: 600; color: #555; }
-            tr:hover { background: #fffde7; }
+            tr:hover { background: #fcfcfc; }
             
-            .score-badge { 
-                padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;
+            /* Visualizations */
+            .chart-container { position: relative; height: 350px; width: 100%; border: 1px solid #eee; background: white; border-radius: 8px; margin-top: 20px; }
+            .chart-svg { width: 100%; height: 100%; }
+            .scatter-pt { opacity: 0.7; transition: r 0.2s; }
+            .scatter-pt:hover { r: 6; opacity: 1; stroke: #333; stroke-width: 1; }
+            
+            .pt-normal { fill: #1a73e8; opacity: 0.3; }
+            .pt-anomaly { fill: #d93025; opacity: 0.8; r: 4; }
+            
+            .hist-chart { display: flex; align-items: flex-end; height: 150px; gap: 2px; margin: 20px 0; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+            .hist-bar { background: #1a73e8; min-width: 5px; flex: 1; opacity: 0.7; }
+            .hist-bar:hover { opacity: 1; }
+            
+            .legend { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+            .legend-item { display: flex; align-items: center; font-size: 0.9em; color: #666; }
+            .legend-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+            
+            @media (max-width: 768px) {
+                .grid-2 { grid-template-columns: 1fr; }
             }
-            
-            .summary-item { margin-bottom: 10px; display: flex; justify-content: space-between; }
-            .summary-label { font-weight: 500; color: #666; }
-            .summary-value { font-family: monospace; font-weight: bold; }
         </style>
         """
 
-    def _generate_samples_table(self) -> str:
+    def _generate_top_anomalies(self) -> str:
         samples = self.metrics.get('top_anomalies_samples', [])
         scores = self.metrics.get('top_anomalies_scores', [])
         
-        if not samples:
-            return "<p>No sample data available.</p>"
-            
-        # Get column names
-        cols = list(samples[0].keys())
+        if not samples: return "<p>No anomaly details available.</p>"
         
-        html = '<table><thead><tr><th>Score</th>'
-        for col in cols[:6]: # Limit columns for readability
-            html += f'<th>{col}</th>'
-        html += '</tr></thead><tbody>'
-        
-        for i, sample in enumerate(samples):
-            score = scores[i]
-            # Use color intensity for score
-            # Higher negative score = more anomalous. typically ranges from -0.5 to 0
-            # Normalize for color: score -0.5 (very red) to 0 (less red)
-            intensity = min(1.0, abs(score) * 2)
-            bg = f'rgba(211, 47, 47, {0.1 + intensity * 0.4})'
+        # Determine columns to show (first 5 for brevity)
+        if len(samples) > 0:
+            cols = list(samples[0].keys())[:5]
+        else:
+            return ""
             
-            html += f'<tr style="background: {bg};">'
-            html += f'<td><span class="score-badge">{score:.4f}</span></td>'
-            for col in cols[:6]:
-                val = sample[col]
-                val_str = f"{val:.4f}" if isinstance(val, (float, np.float64)) else str(val)
-                html += f'<td>{val_str}</td>'
+        html = '<table><tr><th>Anomaly Score</th>' + ''.join(f'<th>{c}</th>' for c in cols) + '</tr>'
+        
+        for i, row in enumerate(samples):
+            score = scores[i] if i < len(scores) else 0
+            # Highlight high anomalies? In IsoForest, lower/negative is more anomalous.
+            # We assume metrics passed raw decision_function. IsolationForest: < 0 is anomaly.
+            
+            html += f'<tr><td style="color: #d93025; font-weight: bold;">{score:.4f}</td>'
+            for c in cols:
+                val = row.get(c, '')
+                if isinstance(val, float): val = f"{val:.4f}"
+                html += f'<td>{val}</td>'
             html += '</tr>'
             
-        html += '</tbody></table>'
-        if len(cols) > 6:
-            html += f'<p style="font-size: 0.8em; color: #888;">* Showing first 6 of {len(cols)} columns.</p>'
+        html += '</table>'
+        html += '<p style="font-size:0.8em; color:#888;">Showing top 10 most anomalous samples (lowest scores).</p>'
         return html
+
+    def _generate_pca_plot(self) -> str:
+        """Generate PCA scatter plot SVG"""
+        pdo = self.dataset_info.get('pca_data', [])
+        if not pdo: return "<p>No visualization data available.</p>"
+        
+        # Normalize coordinates
+        xs = [p['x'] for p in pdo]
+        ys = [p['y'] for p in pdo]
+        if not xs: return ""
+        
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        range_x = max_x - min_x if max_x != min_x else 1
+        range_y = max_y - min_y if max_y != min_y else 1
+        
+        padding = 10
+        width = 100 - 2*padding
+        height = 100 - 2*padding
+        
+        points_svg = ""
+        # Draw normal first, then anomalies on top
+        normal_pts = [p for p in pdo if p['label'] == 1]
+        anomaly_pts = [p for p in pdo if p['label'] == -1]
+        
+        for p in normal_pts + anomaly_pts:
+            cx = padding + ((p['x'] - min_x) / range_x) * width
+            cy = 100 - (padding + ((p['y'] - min_y) / range_y) * height)
+            cls = "pt-normal" if p['label'] == 1 else "pt-anomaly"
+            points_svg += f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="3" class="scatter-pt {cls}" />'
+            
+        return f"""
+        <div class="chart-container">
+            <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                 <rect x="0" y="0" width="100" height="100" fill="#fafafa" rx="4" />
+                {points_svg}
+            </svg>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot" style="background: #1a73e8; opacity:0.5;"></div>Normal</div>
+                <div class="legend-item"><div class="legend-dot" style="background: #d93025;"></div>Anomaly</div>
+            </div>
+        </div>
+        """
 
     def generate(self) -> str:
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        algo = self.metrics.get('algorithm', 'Unknown')
         
         return f"""
         <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Anomaly Report</title>{self._get_css()}</head>
@@ -132,47 +180,39 @@ class AnomalyReportGenerator:
                 <div class="grid">
                     <div class="stat-box red">
                         <div class="stat-number">{self.metrics.get('anomaly_count')}</div>
-                        <div class="stat-label">Anomalies Detected</div>
+                        <div class="stat-label">Anomalies Found</div>
                     </div>
-                    <div class="stat-box blue">
+                    <div class="stat-box green">
                         <div class="stat-number">{self.metrics.get('anomaly_percentage', 0):.2f}%</div>
                         <div class="stat-label">Contamination Rate</div>
                     </div>
-                    <div class="stat-box info">
-                        <div class="stat-number">{self.dataset_info.get('rows')}</div>
-                        <div class="stat-label">Total Rows</div>
+                    <div class="stat-box gray">
+                        <div class="stat-number" style="font-size: 1.8em; margin-top: 10px;">{algo}</div>
+                        <div class="stat-label">Algorithm</div>
                     </div>
                 </div>
             </div>
             
-            <div class="card">
-                <div class="grid-2">
-                    <div>
-                        <h2>⚡ Training Statistics</h2>
-                        <div class="summary-item"><span class="summary-label">Algorithm</span><span class="summary-value">Isolation Forest</span></div>
-                        <div class="summary-item"><span class="summary-label">Execution Time</span><span class="summary-value">{self.metrics.get('execution_time', 0):.2f}s</span></div>
-                        <div class="summary-item"><span class="summary-label">Features Analyzed</span><span class="summary-value">{self.dataset_info.get('features')}</span></div>
-                    </div>
-                    <div>
-                        <h2>📊 Score Profile</h2>
-                        <div class="summary-item"><span class="summary-label">Mean Score</span><span class="summary-value">{self.metrics.get('mean_anomaly_score', 0):.4f}</span></div>
-                        <div class="summary-item"><span class="summary-label">Min Score (Top Anomaly)</span><span class="summary-value" style="color: #d32f2f;">{self.metrics.get('min_anomaly_score', 0):.4f}</span></div>
-                        <div class="summary-item"><span class="summary-label">Max Score (Normal)</span><span class="summary-value">{self.metrics.get('max_anomaly_score', 0):.4f}</span></div>
-                    </div>
+            <div class="grid-2">
+                <div class="card">
+                    <h2>🗺️ Anomaly Visualization</h2>
+                    <p style="color: #666; font-size: 0.9em;">
+                        2D projection highlighting anomalies (Red) vs normal data (Blue).
+                    </p>
+                    {self._generate_pca_plot()}
                 </div>
-            </div>
-            
-            <div class="card">
-                <h2>🔍 Top Anomalies Sample</h2>
-                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
-                    Detailed profile of the rows with the highest anomaly scores. Lower scores represent higher deviations.
-                </p>
-                {self._generate_samples_table()}
+                
+                <div class="card">
+                    <h2>📋 Top Anomalies</h2>
+                    <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                        Samples with the highest anomaly scores.
+                    </p>
+                    {self._generate_top_anomalies()}
+                </div>
             </div>
             
             <div class="card" style="text-align: center; color: #999; font-size: 0.9em;">
                 <p>Generated by <strong>ez-automl-lite</strong> &bull; {timestamp}</p>
-                <p>Job ID: <code>{self.job_id}</code></p>
             </div>
         </div></body></html>
         """

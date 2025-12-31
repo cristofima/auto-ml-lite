@@ -21,10 +21,14 @@ def test_clustering():
     print(f"Optimal K: {ac.optimal_k}")
     print(f"Best Silhouette Score: {ac.metrics.get('best_silhouette'):.4f}")
     
-    # 3. Generate Report
-    report_name = "iris_cluster_report.html"
-    ac.report(report_name)
-    print(f"Clustering report generated: {report_name}")
+    # 3. Generate Reports
+    eda_report_name = "iris_cluster_eda_report.html"
+    ac.eda(df, eda_report_name)
+    print(f"EDA Report generated: {eda_report_name}")
+
+    training_report_name = "iris_cluster_training_report.html"
+    ac.report(training_report_name)
+    print(f"Clustering Training Report generated: {training_report_name}")
     
     # 4. Predict
     labels = ac.predict(df.head())
