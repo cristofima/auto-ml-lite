@@ -18,7 +18,13 @@ A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, 
 ## 📦 Installation
 
 ```bash
+# Full installation (recommended)
 pip install "ez-automl-lite[all]"
+
+# Or install with specific optional dependencies:
+pip install "ez-automl-lite[onnx]"     # ONNX export support
+pip install "ez-automl-lite[reports]"  # Enhanced EDA reports
+pip install "ez-automl-lite[cluster]"  # DBSCAN automatic eps selection
 ```
 
 ---
@@ -42,7 +48,7 @@ aml.report("classification_report.html")
 ```
 
 ### 3. Clustering (Unsupervised)
-Automated optimal K-search using Silhouette and Calinski-Harabasz scores.
+Automated optimal K-search using Silhouette and Calinski-Harabasz scores. **NEW**: Automatic DBSCAN `eps` parameter selection via k-distance elbow detection.
 ```python
 from ez_automl_lite import AutoCluster
 ac = AutoCluster(max_clusters=8).fit(df)
@@ -83,7 +89,7 @@ Check the `examples/` directory for full implementation scripts:
 - [x] Premium CSS-only Reports
 - [x] AutoCluster & AutoAnomaly implementation
 - [x] Cross-platform ONNX support
-- [ ] PyPI Automated Release Workflow
+- [X] PyPI Automated Release Workflow
 
 ---
 

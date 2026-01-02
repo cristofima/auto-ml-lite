@@ -42,8 +42,11 @@ onnx = [
 reports = [
     "sweetviz>=2.3.1",
 ]
+cluster = [
+    "kneed>=0.8.5",
+]
 all = [
-    "ez-automl-lite[onnx,reports]"
+    "ez-automl-lite[onnx,reports,cluster]"
 ]
 
 [tool.setuptools.packages.find]

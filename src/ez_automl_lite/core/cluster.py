@@ -7,13 +7,19 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering, DBSCAN
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
 from sklearn.decomposition import PCA
 from typing import Optional
 import time
 import uuid
 from ez_automl_lite.reports.cluster_report import generate_cluster_report
 from ez_automl_lite.reports.eda import generate_eda_report
+
+try:
+    from kneed import KneeLocator
+    KNEED_AVAILABLE = True
+except ImportError:
+    KNEED_AVAILABLE = False
 
 class AutoCluster:
     """
@@ -34,10 +40,62 @@ class AutoCluster:
         self.algorithm_name = "K-Means" # default
         self.knn_predictor = None
 
-    def fit(self, df: pd.DataFrame, algorithm: str = 'auto') -> 'AutoCluster':
+    def _auto_select_eps(self, X_scaled: np.ndarray, min_samples: int = 5) -> float:
+        """
+        Automatically select eps for DBSCAN using k-distance elbow detection.
+        Uses the k-NN distance to min_samples-th neighbor and detects the knee point.
+        """
+        if not KNEED_AVAILABLE:
+            print("Warning: kneed library not available. Install with 'pip install kneed' for automatic eps selection.")
+            return 0.5  # fallback default
+        
+        try:
+            # Sample if dataset is too large (>5000 points)
+            if len(X_scaled) > 5000:
+                indices = np.random.choice(len(X_scaled), 5000, replace=False)
+                X_sample = X_scaled[indices]
+            else:
+                X_sample = X_scaled
+            
+            # Calculate k-NN distances (k = min_samples)
+            neighbors = NearestNeighbors(n_neighbors=min_samples)
+            neighbors.fit(X_sample)
+            distances, _ = neighbors.kneighbors(X_sample)
+            
+            # Sort distances to k-th neighbor
+            k_distances = np.sort(distances[:, min_samples - 1])
+            x_values = np.arange(len(k_distances))
+            
+            # Detect knee point
+            kneedle = KneeLocator(
+                x_values, 
+                k_distances, 
+                curve='convex', 
+                direction='increasing',
+                S=1.0  # Sensitivity parameter
+            )
+            
+            if kneedle.knee is not None:
+                eps = k_distances[kneedle.knee]
+                print(f"Automatic eps selection: {eps:.4f} (detected via k-distance elbow)")
+                return float(eps)
+            else:
+                print("Warning: Could not detect elbow in k-distance plot. Using default eps=0.5")
+                return 0.5
+                
+        except Exception as e:
+            print(f"Warning: Automatic eps selection failed ({e}). Using default eps=0.5")
+            return 0.5
+
+    def fit(self, df: pd.DataFrame, algorithm: str = 'auto', eps: Optional[float] = None, min_samples: int = 5) -> 'AutoCluster':
         """
         Search for the optimal number of clusters or fit specific algorithm.
-        algorithm: 'auto', 'kmeans', 'agglomerative', 'dbscan'
+        
+        Args:
+            df: Input dataframe
+            algorithm: 'auto', 'kmeans', 'agglomerative', 'dbscan'
+            eps: DBSCAN eps parameter. If None, will auto-select using k-distance elbow detection
+            min_samples: DBSCAN min_samples parameter (default: 5)
         """
         print(f"Starting automated clustering (Max K: {self.max_clusters}, Algo: {algorithm})...")
         
@@ -65,11 +123,20 @@ class AutoCluster:
         # --- DBSCAN Logic (Density based, no K search) ---
         if algorithm == 'dbscan':
             print("Running DBSCAN...")
-            # Try a default eps or a small grid search could be implemented, keeping simple for Lite.
-            # Defaulting to eps=0.5, min_samples=5
-            dbscan = DBSCAN(eps=0.5, min_samples=5)
+            
+            # Auto-select eps if not provided
+            if eps is None:
+                eps = self._auto_select_eps(X_scaled, min_samples=min_samples)
+            else:
+                print(f"Using user-provided eps={eps}")
+            
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
             labels = dbscan.fit_predict(X_scaled)
             n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+            
+            if n_clusters_ == 0:
+                print(f"Warning: DBSCAN found no clusters with eps={eps}, min_samples={min_samples}.")
+                print("Try adjusting parameters: increase eps for fewer clusters or decrease for more granularity.")
             
             if n_clusters_ > 1:
                 s_score = self._calculate_silhouette(X_scaled, labels)
@@ -213,16 +280,8 @@ class AutoCluster:
 
     def _predict_nearest(self, X_scaled):
         # Fallback prediction using centroids of training clusters
-        if hasattr(self.best_model, 'labels_'):
-            labels = self.best_model.labels_
-        else:
+        if not hasattr(self.best_model, 'labels_'):
             raise ValueError("Model does not have labels_ attribute.")
-        
-        # We need the original training data to train the KNN
-        # But we don't store X_scaled in self (to save memory usually).
-        # PROPOSAL: We should store X_scaled (or a subset) if we want to enable prediction for these models.
-        # Or we rely on the user passing the same data structure and we can't easily do it without training data.
-        # Wait, in 'fit' we have X_scaled. We should train the KNN *there* and store it.
         
         if not hasattr(self, 'knn_predictor') or self.knn_predictor is None:
              raise ValueError("Prediction fallback model not available. Ensure fit() was called.")
