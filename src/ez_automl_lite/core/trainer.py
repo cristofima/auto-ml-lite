@@ -104,7 +104,7 @@ def train_automl_model(
         # Get probabilities for advanced metrics
         try:
             y_pred_proba = automl.predict_proba(X_test)
-        except:
+        except Exception:
             y_pred_proba = None
             
         metrics = calculate_classification_metrics(y_test, y_pred, y_pred_proba)
