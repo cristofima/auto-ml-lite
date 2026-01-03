@@ -5,6 +5,8 @@ Anomaly Detection Report Generator.
 from datetime import UTC, datetime
 from typing import Any
 
+from ez_automl_lite.reports.viz_utils import generate_pca_scatter_plot
+
 
 def generate_anomaly_report(
     output_path: str, job_id: str, metrics: dict[str, Any], dataset_info: dict[str, Any]
@@ -12,9 +14,7 @@ def generate_anomaly_report(
     """Generate anomaly detection results report."""
     print("Generating anomaly report...")
     try:
-        report = AnomalyReportGenerator(
-            job_id=job_id, metrics=metrics, dataset_info=dataset_info
-        )
+        report = AnomalyReportGenerator(job_id=job_id, metrics=metrics, dataset_info=dataset_info)
         html = report.generate()
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
@@ -26,9 +26,7 @@ def generate_anomaly_report(
 class AnomalyReportGenerator:
     """Generate anomaly detection results report with premium CSS-only visuals."""
 
-    def __init__(
-        self, job_id: str, metrics: dict[str, Any], dataset_info: dict[str, Any]
-    ):
+    def __init__(self, job_id: str, metrics: dict[str, Any], dataset_info: dict[str, Any]):
         self.job_id = job_id
         self.metrics = metrics
         self.dataset_info = dataset_info
@@ -107,9 +105,7 @@ class AnomalyReportGenerator:
             return ""
 
         html = (
-            "<table><tr><th>Anomaly Score</th>"
-            + "".join(f"<th>{c}</th>" for c in cols)
-            + "</tr>"
+            "<table><tr><th>Anomaly Score</th>" + "".join(f"<th>{c}</th>" for c in cols) + "</tr>"
         )
 
         for i, row in enumerate(samples):
@@ -117,9 +113,7 @@ class AnomalyReportGenerator:
             # Highlight high anomalies? In IsoForest, lower/negative is more anomalous.
             # We assume metrics passed raw decision_function. IsolationForest: < 0 is anomaly.
 
-            html += (
-                f'<tr><td style="color: #d93025; font-weight: bold;">{score:.4f}</td>'
-            )
+            html += f'<tr><td style="color: #d93025; font-weight: bold;">{score:.4f}</td>'
             for c in cols:
                 val = row.get(c, "")
                 if isinstance(val, float):
@@ -132,51 +126,9 @@ class AnomalyReportGenerator:
         return html
 
     def _generate_pca_plot(self) -> str:
-        """Generate PCA scatter plot SVG"""
-        pdo = self.dataset_info.get("pca_data", [])
-        if not pdo:
-            return "<p>No visualization data available.</p>"
-
-        # Normalize coordinates
-        xs = [p["x"] for p in pdo]
-        ys = [p["y"] for p in pdo]
-        if not xs:
-            return ""
-
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-        range_x = max_x - min_x if max_x != min_x else 1
-        range_y = max_y - min_y if max_y != min_y else 1
-
-        padding = 10
-        width = 100 - 2 * padding
-        height = 100 - 2 * padding
-
-        points_svg = ""
-        # Draw normal first, then anomalies on top
-        normal_pts = [p for p in pdo if p["label"] == 1]
-        anomaly_pts = [p for p in pdo if p["label"] == -1]
-
-        for p in normal_pts + anomaly_pts:
-            cx = padding + ((p["x"] - min_x) / range_x) * width
-            cy = 100 - (padding + ((p["y"] - min_y) / range_y) * height)
-            cls = "pt-normal" if p["label"] == 1 else "pt-anomaly"
-            points_svg += (
-                f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="3" class="scatter-pt {cls}" />'
-            )
-
-        return f"""
-        <div class="chart-container">
-            <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                 <rect x="0" y="0" width="100" height="100" fill="#fafafa" rx="4" />
-                {points_svg}
-            </svg>
-            <div class="legend">
-                <div class="legend-item"><div class="legend-dot" style="background: #1a73e8; opacity:0.5;"></div>Normal</div>
-                <div class="legend-item"><div class="legend-dot" style="background: #d93025;"></div>Anomaly</div>
-            </div>
-        </div>
-        """
+        """Generate PCA scatter plot SVG using shared utility."""
+        pca_data = self.dataset_info.get("pca_data", [])
+        return generate_pca_scatter_plot(pca_data=pca_data, mode="anomaly")
 
     def generate(self) -> str:
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
