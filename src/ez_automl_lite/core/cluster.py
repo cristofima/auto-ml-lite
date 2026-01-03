@@ -52,7 +52,8 @@ class AutoCluster:
         try:
             # Sample if dataset is too large (>5000 points)
             if len(X_scaled) > 5000:
-                indices = np.random.choice(len(X_scaled), 5000, replace=False)
+                rng = np.random.default_rng(self.random_state)
+                indices = rng.choice(len(X_scaled), 5000, replace=False)
                 X_sample = X_scaled[indices]
             else:
                 X_sample = X_scaled
@@ -249,8 +250,8 @@ class AutoCluster:
                 labels = labels[indices]
                 
             self.dataset_info['pca_data'] = [
-                {'x': float(c[0]), 'y': float(c[1]), 'cluster': int(l)} 
-                for c, l in zip(coords, labels)
+                {'x': float(coord[0]), 'y': float(coord[1]), 'cluster': int(label)} 
+                for coord, label in zip(coords, labels, strict=True)
             ]
             self.dataset_info['pca_explained_variance'] = pca.explained_variance_ratio_.tolist()
             

@@ -185,7 +185,7 @@ def get_feature_importance(model: AutoML, feature_names: pd.Index) -> Dict[str, 
         
         if hasattr(best_model, 'feature_importances_'):
             importances = best_model.feature_importances_
-            feature_importance = dict(zip(feature_names, [float(x) for x in importances.tolist()]))
+            feature_importance = dict(zip(feature_names, [float(x) for x in importances.tolist()], strict=True))
             return dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
         
         if hasattr(model, 'feature_importances_'):

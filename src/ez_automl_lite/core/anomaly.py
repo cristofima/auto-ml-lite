@@ -134,8 +134,8 @@ class AutoAnomaly:
                 labels = labels[indices]
                 
             self.dataset_info['pca_data'] = [
-                {'x': float(c[0]), 'y': float(c[1]), 'label': int(l)} 
-                for c, l in zip(coords, labels)
+                {'x': float(coord[0]), 'y': float(coord[1]), 'label': int(label)} 
+                for coord, label in zip(coords, labels, strict=True)
             ]
             
         except Exception as e:

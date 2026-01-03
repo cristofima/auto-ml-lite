@@ -4,7 +4,7 @@ EDA (Exploratory Data Analysis) Report Generator.
 
 import pandas as pd
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from datetime import datetime, timezone
 
 # Import shared utilities
@@ -14,7 +14,7 @@ from ez_automl_lite.utils.detection import detect_problem_type, is_id_column
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-def generate_eda_report(df: pd.DataFrame, target_column: str = None, output_path: str = "eda_report.html", task_type: str = None):
+def generate_eda_report(df: pd.DataFrame, target_column: Optional[str], output_path: str = "eda_report.html", task_type: Optional[str] = None):
     """
     Generate comprehensive EDA report with pure HTML/CSS.
     task_type: 'clustering', 'anomaly_detection', or None (inferred from target)
@@ -39,7 +39,7 @@ def generate_eda_report(df: pd.DataFrame, target_column: str = None, output_path
 class EDAReportGenerator:
     """Generate comprehensive EDA report with CSS-only visualizations matching the premium theme."""
     
-    def __init__(self, df: pd.DataFrame, target_column: str = None, task_type: str = None) -> None:
+    def __init__(self, df: pd.DataFrame, target_column: Optional[str], task_type: Optional[str]) -> None:
         self.df = df
         self.target_column = target_column
         

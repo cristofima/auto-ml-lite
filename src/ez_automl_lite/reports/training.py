@@ -329,7 +329,7 @@ class TrainingReportGenerator:
             # Create SVG path
             # ViewBox 0 0 100 100. Flip Y axis logic (1-y)
             path_d = "M 0 100 "
-            for f, t in zip(fpr, tpr):
+            for f, t in zip(fpr, tpr, strict=True):
                 path_d += f"L {f*100:.1f} {(1-t)*100:.1f} "
             path_d += "L 100 0" # End
             
