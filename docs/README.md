@@ -1,39 +1,36 @@
-# Technical Documentation
+# 📚 ez-automl-lite Documentation
 
-This directory contains technical details for the **ez-automl-lite** engine.
+Welcome to the **ez-automl-lite** documentation. This framework makes Machine Learning accessible and efficient using the power of FLAML.
 
-## Core Capabilities
+## 🚀 Quick Start
+See the [Main README](../README.md) for installation and basic usage.
 
-### 1. Supervised Learning (AutoML)
-The `AutoML` class handles both **Regression** and **Classification**.
-- **Engine**: Powered by FLAML for efficient hyperparameter tuning.
-- **Diagnostics**: 
-  - *Regression*: Residuals distribution histogram and Error/Relative-Error sample tables.
-  - *Classification*: CSS heatmap-based Confusion Matrix and Class-wise metrics (Precision, Recall, F1).
+## 🤖 Supported Tasks
 
-### 2. Unsupervised Clustering (AutoCluster)
-- **Algorithm**: MiniBatchKMeans for performance.
-- **Automation**: Iterative K-search (default 2 to 10 clusters).
-- **Selection Criteria**: Multi-metric evaluation using Silhouette and Calinski-Harabasz scores to find the "elbow" or optimal grouping.
+`ez-automl-lite` supports four main types of analysis. Click on each section for detailed information on algorithms, metrics, and reports.
 
-### 3. Anomaly Detection (AutoAnomaly)
-- **Algorithm**: Isolation Forest.
-- **Reporting**: Rows with the highest anomaly scores are profiled and highlighted in the report with heat-intensity styling.
+| Task | Description | Example Use Cases |
+| :--- | :--- | :--- |
+| [**Classification**](./CLASSIFICATION.md) | Predict categories (Yes/No, Spam/Ham). | Customer Churn, Fraud Detection, Image Class. |
+| [**Regression**](./REGRESSION.md) | Predict continuous numbers. | House Prices, Sales Forecasting, Temperature. |
+| [**Clustering**](./CLUSTERING.md) | Group similar items (Unsupervised). | Customer Segmentation, Market Basket Analysis. |
+| [**Anomaly Detection**](./ANOMALY_DETECTION.md) | Find rare events/outliers (Unsupervised). | Intrusion Detection, Defect Detection, Fraud. |
 
-## Shared Infrastructure
+## 📊 Core Features
 
-### Premium Diagnostics
-All reports are generated in `src/ez_automl_lite/reports/`. They use **zero external dependencies** (no Javascript libraries, no Google Fonts, no external CSS frameworks). This ensures:
-1. **Security**: No scripts are executed in the browser.
-2. **Speed**: Reports open instantly.
-3. **Portability**: Reports render perfectly in offline environments or air-gapped systems.
+### 1. Smart Algorithm Selection
+The system automatically selects the best model (e.g., XGBoost, LightGBM, Random Forest) and hyperparameters within your time budget.
 
-### Job ID Tracking
-Every instance of `AutoML`, `AutoCluster`, or `AutoAnomaly` generates a unique `job_id` (UUID4) unless a custom one is provided. This ID is embedded in all generated files for audit trailing.
+### 2. Automated Reports
+Generate "premium-feel" HTML reports with a single line of code:
+- **`model.eda(df)`**: Exploratory Data Analysis (before training).
+- **`model.report()`**: Detailed Training Performance (after training).
 
-### Auto-Preprocessor
-Shared across modules to handle:
-- Automated numeric scaling.
-- Missing value imputation (mean/median/constant).
-- Categorical encoding (LabelEncoding for targets, mapping for features).
-- Outlier filtering and constant feature removal.
+### 3. Deployment Ready
+- **ONNX Export**: All models can be exported to ONNX format for high-speed inference.
+- **Docker Support**: Ready-to-use Dockerfile for easy deployment.
+
+## 📂 Project Structure
+
+- `src/ez_automl_lite/`: Source code.
+- `examples/`: Ready-to-run Python scripts for each task.

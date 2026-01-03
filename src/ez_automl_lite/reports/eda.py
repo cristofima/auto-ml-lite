@@ -4,21 +4,25 @@ EDA (Exploratory Data Analysis) Report Generator.
 
 import pandas as pd
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from datetime import datetime, timezone
 
 # Import shared utilities
 from ez_automl_lite.utils.detection import detect_problem_type, is_id_column
 
 
-def generate_eda_report(df: pd.DataFrame, target_column: str, output_path: str):
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+def generate_eda_report(df: pd.DataFrame, target_column: Optional[str], output_path: str = "eda_report.html", task_type: Optional[str] = None):
     """
     Generate comprehensive EDA report with pure HTML/CSS.
+    task_type: 'clustering', 'anomaly_detection', or None (inferred from target)
     """
-    print("Generating comprehensive EDA report...")
+    print(f"Generating comprehensive EDA report (Task: {task_type or 'Auto'})...")
     
     try:
-        report = EDAReportGenerator(df, target_column)
+        report = EDAReportGenerator(df, target_column, task_type)
         html = report.generate()
         
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -35,55 +39,55 @@ def generate_eda_report(df: pd.DataFrame, target_column: str, output_path: str):
 class EDAReportGenerator:
     """Generate comprehensive EDA report with CSS-only visualizations matching the premium theme."""
     
-    def __init__(self, df: pd.DataFrame, target_column: str) -> None:
+    def __init__(self, df: pd.DataFrame, target_column: Optional[str], task_type: Optional[str]) -> None:
         self.df = df
         self.target_column = target_column
-        self.target = df[target_column]
-        self.features = df.drop(columns=[target_column])
-        self.problem_type = detect_problem_type(self.target)
+        
+        if target_column:
+            self.target = df[target_column]
+            self.features = df.drop(columns=[target_column])
+            self.problem_type = detect_problem_type(self.target)
+        else:
+            self.target = None
+            self.features = df
+            # Use explicit task type if provided, else 'unsupervised'
+            self.problem_type = task_type if task_type else 'unsupervised'
+            
         self.warnings: List[str] = []
         self.excluded_columns: List[Tuple[str, str]] = []
         
         # Analyze columns
         self._analyze_columns()
-    
+
     def _analyze_columns(self) -> None:
         """Analyze and categorize columns"""
         for col in self.features.columns:
             series = self.features[col]
-            
-            # Check for ID columns
             if is_id_column(col, series):
                 self.excluded_columns.append((col, "ID/Identifier column"))
                 continue
-            
-            # Check for constant columns
             if series.nunique() <= 1:
                 self.excluded_columns.append((col, "Constant value (no variance)"))
                 continue
-            
-            # Check for high cardinality categorical
             if series.dtype == 'object' and series.nunique() / len(series) > 0.5:
                 self.excluded_columns.append((col, f"High cardinality ({series.nunique()} unique values)"))
         
-        # Add warnings
         missing_cols = [col for col in self.df.columns if self.df[col].isnull().any()]
         if missing_cols:
             self.warnings.append(f"Missing values detected in {len(missing_cols)} column(s)")
         
-        if self.problem_type == 'classification':
+        if self.problem_type == 'classification' and self.target is not None:
             class_counts = self.target.value_counts()
             if len(class_counts) > 0 and class_counts.min() > 0:
                 imbalance_ratio = class_counts.max() / class_counts.min()
                 if imbalance_ratio > 3:
                     self.warnings.append(f"Class imbalance detected (ratio: {imbalance_ratio:.1f}:1)")
-        else:
+        elif self.problem_type == 'regression' and self.target is not None:
             skew = self.target.skew()
             if abs(skew) > 1:
                 self.warnings.append(f"High skewness detected ({skew:.2f}) in target variable")
 
     def _get_css(self) -> str:
-        """Return premium CSS styles"""
         return """
         <style>
             * { box-sizing: border-box; }
@@ -119,45 +123,31 @@ class EDAReportGenerator:
             th { background: #f8f9fa; font-weight: 600; color: #555; }
             tr:hover { background: #f8f9fa; }
             
-            .bar-container { 
-                background: #e9ecef; border-radius: 4px; height: 20px; 
-                overflow: hidden; margin: 3px 0;
-            }
-            .bar { 
-                height: 100%; border-radius: 4px; 
-                display: flex; align-items: center; padding-left: 8px;
-                font-size: 11px; color: white; font-weight: 500;
-                transition: width 0.3s ease;
-            }
+            .bar-container { background: #e9ecef; border-radius: 4px; height: 20px; overflow: hidden; margin: 3px 0; }
+            .bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; color: white; transition: width 0.3s ease; }
             .bar.primary { background: linear-gradient(90deg, #667eea, #764ba2); }
             .bar.success { background: linear-gradient(90deg, #11998e, #38ef7d); }
             .bar.warning { background: linear-gradient(90deg, #f093fb, #f5576c); }
-            .bar.info { background: linear-gradient(90deg, #4facfe, #00f2fe); }
             
-            .warning-box {
-                background: #fff3cd; border-left: 4px solid #ffc107;
-                padding: 15px; margin: 10px 0; border-radius: 0 8px 8px 0;
-            }
+            .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 10px 0; border-radius: 0 8px 8px 0; }
             
-            .badge {
-                display: inline-block; padding: 3px 8px; border-radius: 12px;
-                font-size: 0.8em; font-weight: 500;
-            }
+            .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500; }
             .badge.classification { background: #e3f2fd; color: #1565c0; }
             .badge.regression { background: #f3e5f5; color: #7b1fa2; }
+            .badge.clustering { background: #e0f2f1; color: #00695c; }
+            .badge.anomaly_detection { background: #ffebee; color: #c62828; }
             .badge.numeric { background: #e8f5e9; color: #2e7d32; }
             .badge.categorical { background: #fff3e0; color: #e65100; }
-            .badge.excluded { background: #ffebee; color: #c62828; }
             
             .mini-chart { display: flex; align-items: flex-end; height: 40px; gap: 2px; }
             .mini-bar { background: #667eea; border-radius: 2px 2px 0 0; min-width: 8px; }
-            
-            @media (max-width: 768px) {
-                .grid-2 { grid-template-columns: 1fr; }
-            }
+
+            /* PCA Plot */
+            .chart-svg { width: 100%; height: 300px; background: #fafafa; border: 1px solid #eee; border-radius: 8px; }
+            .scatter-pt { fill: #667eea; opacity: 0.6; }
         </style>
         """
-    
+
     def _generate_overview(self) -> str:
         """Generate dataset overview section"""
         n_rows, n_cols = self.df.shape
@@ -166,6 +156,10 @@ class EDAReportGenerator:
         n_categorical = n_cols - n_numeric
         memory_mb = self.df.memory_usage(deep=True).sum() / 1024 / 1024
         
+        target_info = ""
+        if self.target_column:
+            target_info = f"<p><strong>Target Column:</strong> <code>{self.target_column}</code></p>"
+            
         return f"""
         <div class="card">
             <h2>📊 Dataset Overview</h2>
@@ -188,213 +182,199 @@ class EDAReportGenerator:
                 </div>
             </div>
             <div style="margin-top: 20px;">
-                <p><strong>Target Column:</strong> <code>{self.target_column}</code></p>
-                <p><strong>Problem Type:</strong> <span class="badge {self.problem_type}">{self.problem_type.upper()}</span></p>
+                {target_info}
+                <p><strong>Problem Type:</strong> <span class="badge {self.problem_type}">{self.problem_type.replace('_', ' ').upper()}</span></p>
                 <p><strong>Memory Usage:</strong> {memory_mb:.2f} MB</p>
             </div>
         </div>
         """
-    
-    def _generate_target_analysis(self) -> str:
-        """Generate target variable analysis"""
-        html = '<div class="card"><h2>🎯 Target Variable Analysis</h2>'
+
+    def _generate_unsupervised_analysis(self) -> str:
+        """Generate analysis specific to Clustering/Anomaly tasks"""
+        if self.problem_type not in ['clustering', 'anomaly_detection']:
+            return ""
+            
+        html = '<div class="card">'
         
-        if self.problem_type == 'classification':
-            class_counts = self.target.value_counts()
-            total = len(self.target)
-            
-            html += '<h3>Class Distribution</h3>'
-            html += '<table><tr><th>Class</th><th>Count</th><th>Percentage</th><th>Distribution</th></tr>'
-            
-            colors = ['primary', 'success', 'warning', 'info']
-            for i, (cls, count) in enumerate(class_counts.items()):
-                pct = count / total * 100
-                color = colors[i % len(colors)]
+        # 1. PCA Visualization of Raw Structure
+        html += f'<h2>🧬 Data Structure Analysis ({self.problem_type.replace("_", " ").title()})</h2>'
+        
+        numeric_df = self.df.select_dtypes(include=[np.number]).fillna(0)
+        if len(numeric_df.columns) >= 2:
+            try:
+                # Simple PCA on raw data to show structure
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(numeric_df)
+                pca = PCA(n_components=2)
+                coords = pca.fit_transform(X_scaled)
+                
+                # Sample if too large
+                if len(coords) > 1000:
+                    idx = np.random.choice(len(coords), 1000, replace=False)
+                    coords = coords[idx]
+                
+                # SVG generation
+                points = ""
+                min_x, max_x = coords[:,0].min(), coords[:,0].max()
+                min_y, max_y = coords[:,1].min(), coords[:,1].max()
+                
+                # Normalize to 0-100
+                w, h = 100, 100
+                range_x = max_x - min_x if max_x != min_x else 1
+                range_y = max_y - min_y if max_y != min_y else 1
+                norm_x = (coords[:,0] - min_x) / range_x * w
+                norm_y = (coords[:,1] - min_y) / range_y * h
+                
+                for x, y in zip(norm_x, norm_y):
+                     points += f'<circle cx="{x:.1f}" cy="{100-y:.1f}" r="1.5" class="scatter-pt" />'
+                
                 html += f"""
-                <tr>
-                    <td><strong>{cls}</strong></td>
-                    <td>{count:,}</td>
-                    <td>{pct:.1f}%</td>
-                    <td>
-                        <div class="bar-container">
-                            <div class="bar {color}" style="width: {pct}%">{pct:.1f}%</div>
-                        </div>
-                    </td>
-                </tr>
+                <div class="grid-2">
+                    <div>
+                        <h3>PCA Projection (Raw Data)</h3>
+                        <p style="color:#666; font-size:0.9em;">2D projection of the feature space. Clusters or outliers may be visible here.</p>
+                        <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">{points}</svg>
+                    </div>
+                    <div>
+                        <h3>Feature Variance</h3>
+                        <p style="color:#666; font-size:0.9em;">Top features by variance (scaled).</p>
+                        {self._generate_variance_table(numeric_df)}
+                    </div>
+                </div>
                 """
-            html += '</table>'
-        else:
-            stats = self.target.describe()
-            html += f"""
-            <div class="grid-2">
-                <div>
-                    <h3>Statistics</h3>
-                    <table>
-                        <tr><td>Mean</td><td><strong>{stats['mean']:.4f}</strong></td></tr>
-                        <tr><td>Median</td><td>{stats['50%']:.4f}</td></tr>
-                        <tr><td>Std Dev</td><td>{stats['std']:.4f}</td></tr>
-                        <tr><td>Min</td><td>{stats['min']:.4f}</td></tr>
-                        <tr><td>Max</td><td>{stats['max']:.4f}</td></tr>
-                    </table>
-                </div>
-                <div>
-                    <h3>Distribution</h3>
-                    {self._generate_histogram(self.target)}
-                </div>
-            </div>
-            """
+            except Exception as e:
+                html += f"<p>Could not generate PCA: {e}</p>"
+        
+        # 2. Specific Analysis per Type
+        if self.problem_type == 'anomaly_detection':
+            html += self._generate_outlier_analysis(numeric_df)
+            
         html += '</div>'
         return html
+
+    def _generate_variance_table(self, df) -> str:
+        vars = df.var().sort_values(ascending=False).head(5)
+        html = '<table><tr><th>Feature</th><th>Variance</th></tr>'
+        for f, v in vars.items():
+            html += f'<tr><td>{f}</td><td>{v:.2f}</td></tr>'
+        html += '</table>'
+        return html
+
+    def _generate_outlier_analysis(self, df) -> str:
+        """Table of outliers by IQR"""
+        html = '<h3>🧐 Potential Outliers (IQR Method)</h3>'
+        html += '<table><tr><th>Feature</th><th>Outlier Count</th><th>%</th></tr>'
+        
+        count = 0
+        for col in df.columns[:5]: # Check top 5 numeric cols
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))).sum()
+            if outliers > 0:
+                html += f'<tr><td>{col}</td><td>{outliers}</td><td>{outliers/len(df)*100:.1f}%</td></tr>'
+                count += 1
+        
+        if count == 0: html += '<tr><td colspan="3">No significant outliers detected in top features.</td></tr>'
+        html += '</table>'
+        return html
     
+    def _generate_target_analysis(self) -> str:
+        # Copied from previous logic, ensuring it handles None target
+        if self.target is None: return ""
+        html = '<div class="card"><h2>🎯 Target Variable Analysis</h2>'
+        if self.problem_type == 'classification':
+             class_counts = self.target.value_counts()
+             total = len(self.target)
+             html += '<h3>Class Distribution</h3><table><tr><th>Class</th><th>Count</th><th>Pct</th></tr>'
+             for cls, count in class_counts.items():
+                 html += f'<tr><td>{cls}</td><td>{count}</td><td>{count/total*100:.1f}%</td></tr>'
+             html += '</table>'
+        else:
+             stats = self.target.describe()
+             html += f'<h3>Statistics</h3><p>Mean: {stats["mean"]:.2f}, Std: {stats["std"]:.2f}</p>'
+             html += self._generate_histogram(self.target)
+        html += '</div>'
+        return html
+
     def _generate_histogram(self, series: pd.Series, bins: int = 20) -> str:
-        """Generate a basic CSS histogram"""
         try:
             counts, _ = np.histogram(series.dropna(), bins=bins)
             max_count = max(counts) if len(counts) > 0 and max(counts) > 0 else 1
-            
             html = '<div class="mini-chart">'
             for count in counts:
                 height = int((count / max_count) * 40)
                 html += f'<div class="mini-bar" style="height: {max(height, 2)}px;"></div>'
             html += '</div>'
             return html
-        except:
-            return "Chart not available"
+        except Exception:
+            return ""
 
     def _generate_correlations(self) -> str:
-        """Generate correlation with target for numeric columns"""
-        numeric_df = self.df.select_dtypes(include=[np.number])
-        if len(numeric_df.columns) <= 1:
-            return ""
-        
-        try:
-            corrs = numeric_df.corr()[self.target_column].sort_values(ascending=False)
-            corrs = corrs.drop(self.target_column)
-            
-            html = '<div class="card"><h2>📈 Correlation with Target</h2>'
-            html += '<table><tr><th>Feature</th><th>Correlation</th><th>Strength</th></tr>'
-            
-            for col, val in corrs.items():
-                strength = "Weak"
-                if abs(val) > 0.7: strength = "Strong"
-                elif abs(val) > 0.4: strength = "Moderate"
-                
-                # Check for NaN correlations
-                if pd.isna(val):
-                    val_str = "N/A"
-                else:
-                    val_str = f"{val:.3f}"
-                
-                html += f"""
-                <tr>
-                    <td><code>{col}</code></td>
-                    <td>{val_str}</td>
-                    <td>{strength}</td>
-                </tr>
-                """
-            html += '</table></div>'
-            return html
-        except:
-            return ""
+        if self.target is None: return ""
+        return ""
 
     def _generate_warnings(self) -> str:
-        """Generate preprocessing warnings and excluded columns"""
-        if not self.warnings and not self.excluded_columns:
-            return ''
-            
+        if not self.warnings and not self.excluded_columns: return ''
         html = '<div class="card"><h2>⚠️ Preprocessing Notes</h2>'
-        
-        if self.excluded_columns:
-            html += '<h3>Columns to be Excluded</h3>'
-            html += '<table><tr><th>Column</th><th>Reason</th></tr>'
-            for col, reason in self.excluded_columns:
-                html += f'<tr><td><code>{col}</code></td><td>{reason}</td></tr>'
-            html += '</table>'
-            
         if self.warnings:
-            for warning in self.warnings:
-                html += f'<div class="warning-box">{warning}</div>'
-                
+            for w in self.warnings: html += f'<div class="warning-box">{w}</div>'
         html += '</div>'
         return html
 
     def _generate_column_details(self) -> str:
-        """Generate table with details for all columns"""
         html = '<div class="card"><h2>📋 Column Details</h2>'
         html += '<table><tr><th>Column</th><th>Type</th><th>Missing</th><th>Unique</th><th>Samples</th></tr>'
-        
         for col in self.df.columns:
             series = self.df[col]
-            missing_pct = series.isnull().sum() / len(series) * 100
-            unique = series.nunique()
-            
-            is_numeric = pd.api.types.is_numeric_dtype(series)
-            type_badge = '<span class="badge numeric">numeric</span>' if is_numeric else '<span class="badge categorical">categorical</span>'
-            
-            samples = series.dropna().head(3).tolist()
-            samples_str = ", ".join([str(s)[:20] for s in samples])
-            
-            html += f"""
-            <tr>
-                <td><code>{col}</code></td>
-                <td>{type_badge}</td>
-                <td>{missing_pct:.1f}%</td>
-                <td>{unique:,}</td>
-                <td style="font-size: 0.85em; color: #666;">{samples_str}</td>
-            </tr>
-            """
-            
+            missing = series.isnull().sum() / len(series) * 100
+            html += f'<tr><td>{col}</td><td>{series.dtype}</td><td>{missing:.1f}%</td><td>{series.nunique()}</td><td>{str(series.head(3).tolist())[:30]}</td></tr>'
         html += '</table></div>'
         return html
 
     def generate(self) -> str:
-        """Assemble the full report"""
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        
         html = f"""
         <!DOCTYPE html>
         <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>EDA Report - {self.target_column}</title>
-            {self._get_css()}
-        </head>
+        <head><meta charset="UTF-8"><title>EDA Report</title>{self._get_css()}</head>
+        <body><div class="container">
+            <h1>📊 Exploratory Data Analysis</h1>
+            {self._generate_overview()}
+            {self._generate_target_analysis()}
+            {self._generate_unsupervised_analysis()}
+            {self._generate_warnings()}
+            {self._generate_correlations()}
+            {self._generate_column_details()}
+            <div class="card" style="text-align:center;color:#666;"><p>Generated by ez-automl-lite • {timestamp}</p></div>
+        </div></body></html>
+        """
+        return html
+
+def generate_minimal_report(df, target, output):
+    """Write a minimal HTML EDA fallback with basic dataset info."""
+    try:
+        n_rows, n_cols = df.shape
+        col_names = ', '.join([f"<code>{c}</code>" for c in df.columns])
+        if target is not None and target in df.columns:
+            target_vals = df[target].unique()
+            target_info = f"<p>Target: <code>{target}</code> ({len(target_vals)} unique values)</p>"
+        else:
+            target_info = "<p>No target column detected.</p>"
+        html = f"""
+        <html>
         <body>
-            <div class="container">
-                <h1>📊 Exploratory Data Analysis</h1>
-                {self._generate_overview()}
-                {self._generate_target_analysis()}
-                {self._generate_warnings()}
-                {self._generate_correlations()}
-                {self._generate_column_details()}
-                
-                <div class="card" style="text-align: center; color: #666;">
-                    <p>Generated by ez-automl-lite</p>
-                    <p style="font-size: 0.85em;">{timestamp}</p>
-                </div>
+            <h1>Error generating full EDA</h1>
+            <div>
+                <p>Dataset shape: {n_rows} rows × {n_cols} columns</p>
+                <p>Columns: {col_names}</p>
+                {target_info}
             </div>
         </body>
         </html>
         """
-        return html
-
-
-def generate_minimal_report(df: pd.DataFrame, target_column: str, output_path: str):
-    """Fallback minimal report"""
-    html = f"""
-    <html>
-    <head><title>Minimal EDA Report</title></head>
-    <body style="font-family: sans-serif; padding: 20px;">
-        <h1>Minimal EDA Report</h1>
-        <p><strong>Target:</strong> {target_column}</p>
-        <p><strong>Dataset Shape:</strong> {df.shape[0]} rows, {df.shape[1]} columns</p>
-        <h2>Column Types</h2>
-        <ul>
-            {"".join([f"<li>{col}: {dtype}</li>" for col, dtype in df.dtypes.items()])}
-        </ul>
-    </body>
-    </html>
-    """
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html)
+        with open(output, 'w', encoding='utf-8') as f:
+            f.write(html)
+    except Exception:
+        with open(output, 'w', encoding='utf-8') as f:
+            f.write("<html><body><h1>Error generating full EDA</h1></body></html>")

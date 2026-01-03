@@ -30,6 +30,12 @@ except _PackageNotFoundError:
     except ImportError:
         __version__ = "unknown"
 
+import warnings
+# Suppress specific warnings reported by users
+warnings.filterwarnings('ignore', category=FutureWarning, module='sklearn.linear_model._logistic')
+warnings.filterwarnings('ignore', message=".*Field onnx.AttributeProto.ints: Expected an int, got a boolean.*")
+warnings.filterwarnings('ignore', message=".*sklearn.utils.parallel.delayed.*")
+
 class AutoML:
     """
     Main entry point for auto-ml-lite.
@@ -65,7 +71,8 @@ class AutoML:
             'test_size': X_test.shape[0],
         })
         
-        model, metrics, feature_importance, y_test_out, y_pred_out = train_automl_model(
+        # Unpack 6 values
+        model, metrics, feature_importance, y_test_out, y_pred_out, y_pred_proba_out = train_automl_model(
             X_train, X_test, y_train, y_test,
             problem_type=problem_type,
             time_budget=self.time_budget
@@ -76,6 +83,7 @@ class AutoML:
         self.feature_importance = feature_importance
         self.y_test = y_test_out
         self.y_pred = y_pred_out
+        self.y_pred_proba = y_pred_proba_out
         self.X_sample = X_train.iloc[:1]
         
         return self
@@ -130,7 +138,8 @@ class AutoML:
             },
             dataset_info=self.dataset_info,
             y_test=self.y_test,
-            y_pred=self.y_pred
+            y_pred=self.y_pred,
+            y_pred_proba=getattr(self, 'y_pred_proba', None)
         )
 
     def eda(self, df: pd.DataFrame, output_path: str = "eda_report.html"):

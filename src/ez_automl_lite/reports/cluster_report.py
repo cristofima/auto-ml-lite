@@ -2,7 +2,7 @@
 Clustering Results Report Generator.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime, timezone
 
 def generate_cluster_report(
@@ -53,6 +53,7 @@ class ClusterReportGenerator:
             }
             
             .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+            .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
             
             .stat-box {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -72,15 +73,40 @@ class ClusterReportGenerator:
             .bar-inner { background: #1a73e8; height: 100%; border-radius: 5px; }
             
             .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 700; background: #e3f2fd; color: #1565c0; }
+            
+            /* Visualizations */
+            .chart-container { position: relative; height: 350px; width: 100%; border: 1px solid #eee; background: white; border-radius: 8px; margin-top: 20px; }
+            .chart-svg { width: 100%; height: 100%; }
+            .scatter-pt { opacity: 0.7; transition: r 0.2s; }
+            .scatter-pt:hover { r: 6; opacity: 1; stroke: #333; stroke-width: 1; }
+            
+            .cluster-0 { fill: #4facfe; }
+            .cluster-1 { fill: #f093fb; }
+            .cluster-2 { fill: #11998e; }
+            .cluster-3 { fill: #f7971e; }
+            .cluster-4 { fill: #667eea; }
+            .cluster-5 { fill: #e55353; }
+            .cluster-6 { fill: #321fdb; }
+            .cluster-7 { fill: #f9b115; }
+            
+            .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; justify-content: center; }
+            .legend-item { display: flex; align-items: center; font-size: 0.85em; color: #666; }
+            .legend-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+            
+            .chart-line { fill: none; stroke: #1a73e8; stroke-width: 2; }
+            .chart-axis { stroke: #ddd; stroke-width: 1; }
+            
+            @media (max-width: 768px) {
+                .grid-2 { grid-template-columns: 1fr; }
+            }
         </style>
         """
 
     def _generate_results_table(self) -> str:
-        html = '<table><tr><th>Clusters (K)</th><th>Silhouette Score</th><th>Calinski-Harabasz</th><th>Quality</th></tr>'
+        html = '<table><tr><th>Clusters (K)</th><th>Silhouette Score</th><th>Calinski-Harabasz</th><th>Inertia</th><th>Quality</th></tr>'
         
         # Max scores for progress bars
         max_sil = max([r['silhouette'] for r in self.search_results]) if self.search_results else 1
-        max_cal = max([r['calinski'] for r in self.search_results]) if self.search_results else 1
         
         for res in self.search_results:
             is_optimal = res['k'] == self.metrics.get('optimal_k')
@@ -88,24 +114,79 @@ class ClusterReportGenerator:
             optimal_badge = '<span class="badge" style="background:#28a745; color:white;">OPTIMAL</span>' if is_optimal else ""
             
             # Simplified quality assessment
-            quality = "Good" if res['silhouette'] > 0.4 else "Moderate" if res['silhouette'] > 0.2 else "Poor"
+            quality = "Good" if res['silhouette'] > 0.5 else "Moderate" if res['silhouette'] > 0.25 else "Poor"
+            inertia_val = f"{res.get('inertia', 0):.2f}" if res.get('inertia', 0) > 0 else "-"
             
             html += f"""
             <tr {row_style}>
                 <td>{res['k']} {optimal_badge}</td>
                 <td>
                     {res['silhouette']:.4f}
-                    <div class="bar-outer"><div class="bar-inner" style="width: {res['silhouette']/max_sil*100}%"></div></div>
+                    <div class="bar-outer"><div class="bar-inner" style="width: {max(0, res['silhouette'])/max_sil*100}%"></div></div>
                 </td>
                 <td>{res['calinski']:.2f}</td>
+                <td>{inertia_val}</td>
                 <td>{quality}</td>
             </tr>
             """
         html += '</table>'
         return html
 
+    def _generate_pca_plot(self) -> str:
+        """Generate PCA scatter plot SVG"""
+        pdo = self.dataset_info.get('pca_data', [])
+        if not pdo: return "<p>No PCA visualization data available.</p>"
+        
+        # Normalize coordinates to 0..100
+        xs = [p['x'] for p in pdo]
+        ys = [p['y'] for p in pdo]
+        
+        if not xs or not ys: return ""
+        
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        
+        range_x = max_x - min_x if max_x != min_x else 1
+        range_y = max_y - min_y if max_y != min_y else 1
+        
+        # Padding
+        padding = 10
+        width = 100 - 2*padding
+        height = 100 - 2*padding
+        
+        points_svg = ""
+        clusters = set()
+        
+        for p in pdo:
+            cx = padding + ((p['x'] - min_x) / range_x) * width
+            cy = 100 - (padding + ((p['y'] - min_y) / range_y) * height) # Flip Y
+            c_id = p['cluster']
+            clusters.add(c_id)
+            points_svg += f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="3" class="scatter-pt cluster-{c_id % 8}" />'
+            
+        legend_html = '<div class="legend">'
+        for c_id in sorted(clusters):
+            legend_html += f'<div class="legend-item"><div class="legend-dot cluster-{c_id % 8}"></div>Cluster {c_id}</div>'
+        legend_html += '</div>'
+        
+        return f"""
+        <div class="chart-container">
+            <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <rect x="0" y="0" width="100" height="100" fill="#fafafa" rx="4" />
+                <!-- Axes -->
+                <line x1="{padding}" y1="{100-padding}" x2="{100-padding}" y2="{100-padding}" class="chart-axis" />
+                <line x1="{padding}" y1="{padding}" x2="{padding}" y2="{100-padding}" class="chart-axis" />
+                
+                {points_svg}
+            </svg>
+            <div style="text-align:center; font-size:0.8em; color:#888; margin-top:5px;">PCA Projection (2D)</div>
+        </div>
+        {legend_html}
+        """
+
     def generate(self) -> str:
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        algo = self.metrics.get('algorithm', 'Unknown')
         
         return f"""
         <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Clustering Report</title>{self._get_css()}</head>
@@ -123,18 +204,28 @@ class ClusterReportGenerator:
                         <div class="stat-label">Best Silhouette</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-number">{self.metrics.get('execution_time', 0):.1f}s</div>
-                        <div class="stat-label">Execution Time</div>
+                        <div class="stat-number">{algo}</div>
+                        <div class="stat-label">Algorithm</div>
                     </div>
                 </div>
             </div>
             
-            <div class="card">
-                <h2>📈 Selection Analysis</h2>
-                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
-                    We evaluated multiple values of K to find the configuration that maximizes group internal consistency and separation.
-                </p>
-                {self._generate_results_table()}
+            <div class="grid-2">
+                <div class="card">
+                    <h2>🗺️ Cluster Visualization (PCA)</h2>
+                    <p style="color: #666; font-size: 0.9em;">
+                        2D projection of the dataset showing cluster separation.
+                    </p>
+                    {self._generate_pca_plot()}
+                </div>
+                
+                <div class="card">
+                    <h2>📈 Selection Analysis</h2>
+                    <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                        Evaluation of internal consistency (Silhouette) and separation (Calinski-Harabasz).
+                    </p>
+                    {self._generate_results_table()}
+                </div>
             </div>
             
             <div class="card" style="text-align: center; color: #999; font-size: 0.9em;">
