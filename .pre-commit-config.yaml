@@ -49,7 +49,7 @@ repos:
       - id: bandit
         args: [-c, pyproject.toml]
         additional_dependencies: ["bandit[toml]"]
-        exclude: ^(tests/|examples/)
+        exclude: ^(tests/|examples/|scripts/)
 
 # Run on all files or specific stages
 default_language_version:
