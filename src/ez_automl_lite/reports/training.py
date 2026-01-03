@@ -265,7 +265,7 @@ class TrainingReportGenerator:
         residuals = self.y_pred - y_true
 
         # Calculate histogram for residuals
-        counts, bins = np.histogram(residuals, bins=15)
+        counts, _ = np.histogram(residuals, bins=15)
         max_count = max(counts) if len(counts) > 0 else 1
 
         html = '<div class="card"><h2>🔬 Regression Diagnostics</h2>'
@@ -276,7 +276,9 @@ class TrainingReportGenerator:
         html += '<div class="hist-chart">'
         for count in counts:
             h = (count / max_count) * 100
-            html += f'<div class="hist-bar" style="height: {max(h, 2)}%;" data-value="{count}"></div>'
+            html += (
+                f'<div class="hist-bar" style="height: {max(h, 2)}%;" data-value="{count}"></div>'
+            )
         html += "</div></div>"
 
         # Error metrics summary
@@ -388,9 +390,7 @@ class TrainingReportGenerator:
             max_val = cm.max() if cm.max() > 0 else 1
             for i, row in enumerate(cm):
                 html += '<div class="matrix-row-container">'
-                html += (
-                    f'<div class="matrix-row-label">ACTUAL: {unique_labels[i]}</div>'
-                )
+                html += f'<div class="matrix-row-label">ACTUAL: {unique_labels[i]}</div>'
                 html += f'<div class="matrix" style="grid-template-columns: repeat({len(unique_labels)}, 1fr);">'
                 for j, val in enumerate(row):
                     opacity = 0.1 + (val / max_val) * 0.9
@@ -417,9 +417,7 @@ class TrainingReportGenerator:
         # Performance by Class table
         html += '<h3 style="margin-top:30px;">Class-wise Performance</h3>'
         try:
-            report_dict = classification_report(
-                self.y_test, self.y_pred, output_dict=True
-            )
+            report_dict = classification_report(self.y_test, self.y_pred, output_dict=True)
             html += "<table><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>Support</th></tr>"
             for label, met in report_dict.items():
                 if label in ["accuracy", "macro avg", "weighted avg"]:
@@ -443,9 +441,9 @@ class TrainingReportGenerator:
     def _generate_importance(self) -> str:
         if not self.feature_importance:
             return ""
-        sorted_features = sorted(
-            self.feature_importance.items(), key=lambda x: x[1], reverse=True
-        )[:15]
+        sorted_features = sorted(self.feature_importance.items(), key=lambda x: x[1], reverse=True)[
+            :15
+        ]
         max_imp = max(v for _, v in sorted_features) if sorted_features else 1
 
         html = '<div class="card"><h2>📈 Feature Importance</h2><p style="color:#666; font-size:0.9em; margin-bottom:20px;">Top features contributing to the model\'s performance.</p>'

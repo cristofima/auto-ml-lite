@@ -15,15 +15,15 @@ from ez_automl_lite.core.trainer import train_automl_model
 from ez_automl_lite.reports.eda import generate_eda_report
 from ez_automl_lite.reports.training import generate_training_report
 
+
 __all__ = [
-    "AutoML",
     "AutoAnomaly",
     "AutoCluster",
-    "export_model_to_onnx",
     "AutoPreprocessor",
-    "train_automl_model",
+    "export_model_to_onnx",
     "generate_eda_report",
     "generate_training_report",
+    "train_automl_model",
 ]
 
 
@@ -48,9 +48,7 @@ import warnings
 
 
 # Suppress specific warnings reported by users
-warnings.filterwarnings(
-    "ignore", category=FutureWarning, module="sklearn.linear_model._logistic"
-)
+warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn.linear_model._logistic")
 warnings.filterwarnings(
     "ignore",
     message=".*Field onnx.AttributeProto.ints: Expected an int, got a boolean.*",
@@ -86,9 +84,7 @@ class AutoML:
             "target_column": self.target,
         }
 
-        X_train, X_test, y_train, y_test, problem_type = self.preprocessor.preprocess(
-            df
-        )
+        X_train, X_test, y_train, y_test, problem_type = self.preprocessor.preprocess(df)
         self.problem_type = problem_type
         self.dataset_info.update(
             {
@@ -141,7 +137,11 @@ class AutoML:
                 X[col] = (
                     X[col]
                     .astype(str)
-                    .map(lambda x: le.transform([x])[0] if x in le.classes_ else -1)
+                    .map(
+                        lambda x, encoder=le: encoder.transform([x])[0]
+                        if x in encoder.classes_
+                        else -1
+                    )
                 )
 
         # Ensure column order matches training

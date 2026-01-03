@@ -7,6 +7,7 @@ from ez_automl_lite.utils.detection import (
     is_id_column,
 )
 
+
 __all__ = [
     "detect_problem_type",
     "is_constant_column",

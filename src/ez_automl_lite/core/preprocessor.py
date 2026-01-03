@@ -93,19 +93,13 @@ class AutoPreprocessor:
                 continue
 
             # Check for high cardinality categorical
-            if series.dtype == "object":
-                if is_high_cardinality_categorical(series, threshold=0.5):
-                    useless_cols.append(col)
-                    reasons[col] = (
-                        f"high cardinality categorical ({series.nunique()} unique values)"
-                    )
-                    continue
-
+            if series.dtype == "object" and is_high_cardinality_categorical(series, threshold=0.5):
+                useless_cols.append(col)
+                reasons[col] = f"high cardinality categorical ({series.nunique()} unique values)"
+                continue
         # Log dropped columns
         if useless_cols:
-            print(
-                f"\n🔍 Detected {len(useless_cols)} column(s) to exclude from training:"
-            )
+            print(f"\n🔍 Detected {len(useless_cols)} column(s) to exclude from training:")
             for col in useless_cols:
                 print(f"   - '{col}': {reasons[col]}")
             print()
@@ -156,7 +150,7 @@ class AutoPreprocessor:
                 df[col] = (
                     df[col]
                     .astype(str)
-                    .apply(lambda x: le.transform([x])[0] if x in le.classes_ else -1)
+                    .apply(lambda x, enc=le: enc.transform([x])[0] if x in enc.classes_ else -1)
                 )
 
         return df
@@ -257,8 +251,6 @@ class AutoPreprocessor:
             stratify=y if problem_type == "classification" else None,
         )
 
-        print(
-            f"📊 Training with {len(self.feature_columns)} features: {self.feature_columns}"
-        )
+        print(f"📊 Training with {len(self.feature_columns)} features: {self.feature_columns}")
 
         return X_train, X_test, y_train, y_test, problem_type

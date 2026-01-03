@@ -41,9 +41,7 @@ def _convert_lightgbm_to_onnx(model: Any, n_features: int, output_path: str) -> 
 
     try:
         initial_types = [("input", LGBMFloatTensorType([None, n_features]))]
-        onnx_model = convert_lightgbm(
-            model, initial_types=initial_types, target_opset=15
-        )
+        onnx_model = convert_lightgbm(model, initial_types=initial_types, target_opset=15)
         with open(output_path, "wb") as f:
             f.write(onnx_model.SerializeToString())
         return True
@@ -72,7 +70,6 @@ def export_model_to_onnx(
     model: Any,
     X_sample: pd.DataFrame,
     output_path: str,
-    model_name: str = "automl_model",
 ) -> bool:
     """Export a trained sklearn model to ONNX format."""
     if not ONNX_AVAILABLE:
