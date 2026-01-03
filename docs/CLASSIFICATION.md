@@ -10,7 +10,7 @@ Classification is a supervised learning task where the goal is to predict the ca
 | **LightGBM** | `lgbm` | Faster and lighter version of Gradient Boosting. Excellent for large datasets. |
 | **XGBoost** | `xgboost` | Powerful and widely used Gradient Boosting implementation. |
 | **Random Forest** | `rf` | Ensemble of decision trees. Robust and less prone to overfitting. |
-| **Extra Trees** | `extra_tree` | Extremely Randomized Trees, similar to RF but faster often. |
+| **Extra Trees** | `extra_tree` | Extremely Randomized Trees, similar to RF but often faster. |
 | **Logistic Regression** | `lrl1`, `lrl2` | Linear model using L1 or L2 regularization. Good baseline. |
 
 > **Note**: Linear models (`lrl1`, `lrl2`) are automatically disabled for large datasets (>100k rows) to ensure speed.

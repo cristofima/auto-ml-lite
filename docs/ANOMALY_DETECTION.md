@@ -8,7 +8,7 @@ Anomaly Detection is an *unsupervised* task (or semi-supervised) aimed at identi
 | Algorithm | ID | Description |
 | :--- | :--- | :--- |
 | **Isolation Forest** | `isolation_forest` | (Default) Isolates observations by randomly selecting a feature and split value. Anomalies are isolated faster (fewer splits). Efficient for high dimensions. |
-| **Local Outlier Factor** | `lof` | Measures the local deviation of density of a given sample with respect to its neighbors. |
+| **Local Outlier Factor** | `lof` | Measures the local deviation of density of a given sample compared to its neighbors. |
 | **One-Class SVM** | `svm` | Captures the shape of the data distribution (frontier) and classifies points outside it as outliers. |
 
 ## 📊 Metrics & Outputs
