@@ -163,9 +163,18 @@ def calculate_regression_metrics(y_true: pd.Series, y_pred: np.ndarray) -> Dict[
     metrics = {
         'r2_score': float(r2_score(y_true, y_pred)),
         'rmse': float(np.sqrt(mse)),
-        'mae': float(mean_absolute_error(y_true, y_pred)),
-        'mape': float(mean_absolute_percentage_error(y_true, y_pred))
+        'mae': float(mean_absolute_error(y_true, y_pred))
     }
+    
+    # MAPE can fail if y_true contains zeros
+    try:
+        if not (y_true == 0).any():
+            metrics['mape'] = float(mean_absolute_percentage_error(y_true, y_pred))
+        else:
+            print("Warning: MAPE not calculated due to zero values in y_true")
+    except Exception as e:
+        print(f"Warning: Could not calculate MAPE: {e}")
+    
     return metrics
 
 
