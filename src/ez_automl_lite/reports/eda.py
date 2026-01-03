@@ -220,8 +220,10 @@ class EDAReportGenerator:
                 
                 # Normalize to 0-100
                 w, h = 100, 100
-                norm_x = (coords[:,0] - min_x) / (max_x - min_x) * w
-                norm_y = (coords[:,1] - min_y) / (max_y - min_y) * h
+                range_x = max_x - min_x if max_x != min_x else 1
+                range_y = max_y - min_y if max_y != min_y else 1
+                norm_x = (coords[:,0] - min_x) / range_x * w
+                norm_y = (coords[:,1] - min_y) / range_y * h
                 
                 for x, y in zip(norm_x, norm_y):
                      points += f'<circle cx="{x:.1f}" cy="{100-y:.1f}" r="1.5" class="scatter-pt" />'
