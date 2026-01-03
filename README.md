@@ -95,5 +95,5 @@ Check the `examples/` directory for full implementation scripts:
 
 ## 🤝 Contributing & License
 
-Created by [Cristopher Coronado](https://github.com/cristofima). 
+Created by [Cristopher Coronado](https://github.com/cristofima).
 Distributed under the MIT License.
