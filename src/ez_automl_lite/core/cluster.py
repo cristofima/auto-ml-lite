@@ -101,6 +101,8 @@ class AutoCluster:
         
         # Preprocessing: Fill numeric missing and scale
         X_raw = df.select_dtypes(include=[np.number]).copy()
+        # Drop columns that are entirely NaN before imputation
+        X_raw = X_raw.dropna(axis=1, how='all')
         X_raw = X_raw.fillna(X_raw.mean())
         self.feature_columns = list(X_raw.columns)
         
