@@ -5,6 +5,8 @@ Clustering Results Report Generator.
 from datetime import UTC, datetime
 from typing import Any
 
+from ez_automl_lite.reports.viz_utils import generate_pca_scatter_plot
+
 
 def generate_cluster_report(
     output_path: str, job_id: str, metrics: dict[str, Any], dataset_info: dict[str, Any]
@@ -12,9 +14,7 @@ def generate_cluster_report(
     """Generate clustering results report."""
     print("Generating clustering report...")
     try:
-        report = ClusterReportGenerator(
-            job_id=job_id, metrics=metrics, dataset_info=dataset_info
-        )
+        report = ClusterReportGenerator(job_id=job_id, metrics=metrics, dataset_info=dataset_info)
         html = report.generate()
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
@@ -26,9 +26,7 @@ def generate_cluster_report(
 class ClusterReportGenerator:
     """Generate clustering results report with premium CSS-only visuals."""
 
-    def __init__(
-        self, job_id: str, metrics: dict[str, Any], dataset_info: dict[str, Any]
-    ):
+    def __init__(self, job_id: str, metrics: dict[str, Any], dataset_info: dict[str, Any]):
         self.job_id = job_id
         self.metrics = metrics
         self.dataset_info = dataset_info
@@ -105,17 +103,11 @@ class ClusterReportGenerator:
         html = "<table><tr><th>Clusters (K)</th><th>Silhouette Score</th><th>Calinski-Harabasz</th><th>Inertia</th><th>Quality</th></tr>"
 
         # Max scores for progress bars
-        max_sil = (
-            max([r["silhouette"] for r in self.search_results])
-            if self.search_results
-            else 1
-        )
+        max_sil = max([r["silhouette"] for r in self.search_results]) if self.search_results else 1
 
         for res in self.search_results:
             is_optimal = res["k"] == self.metrics.get("optimal_k")
-            row_style = (
-                'style="background: #f1f8e9; font-weight: bold;"' if is_optimal else ""
-            )
+            row_style = 'style="background: #f1f8e9; font-weight: bold;"' if is_optimal else ""
             optimal_badge = (
                 '<span class="badge" style="background:#28a745; color:white;">OPTIMAL</span>'
                 if is_optimal
@@ -130,9 +122,7 @@ class ClusterReportGenerator:
                 if res["silhouette"] > 0.25
                 else "Poor"
             )
-            inertia_val = (
-                f"{res.get('inertia', 0):.2f}" if res.get("inertia", 0) > 0 else "-"
-            )
+            inertia_val = f"{res.get('inertia', 0):.2f}" if res.get("inertia", 0) > 0 else "-"
 
             html += f"""
             <tr {row_style}>
@@ -150,58 +140,11 @@ class ClusterReportGenerator:
         return html
 
     def _generate_pca_plot(self) -> str:
-        """Generate PCA scatter plot SVG"""
-        pdo = self.dataset_info.get("pca_data", [])
-        if not pdo:
-            return "<p>No PCA visualization data available.</p>"
-
-        # Normalize coordinates to 0..100
-        xs = [p["x"] for p in pdo]
-        ys = [p["y"] for p in pdo]
-
-        if not xs or not ys:
-            return ""
-
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-
-        range_x = max_x - min_x if max_x != min_x else 1
-        range_y = max_y - min_y if max_y != min_y else 1
-
-        # Padding
-        padding = 10
-        width = 100 - 2 * padding
-        height = 100 - 2 * padding
-
-        points_svg = ""
-        clusters = set()
-
-        for p in pdo:
-            cx = padding + ((p["x"] - min_x) / range_x) * width
-            cy = 100 - (padding + ((p["y"] - min_y) / range_y) * height)  # Flip Y
-            c_id = p["cluster"]
-            clusters.add(c_id)
-            points_svg += f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="3" class="scatter-pt cluster-{c_id % 8}" />'
-
-        legend_html = '<div class="legend">'
-        for c_id in sorted(clusters):
-            legend_html += f'<div class="legend-item"><div class="legend-dot cluster-{c_id % 8}"></div>Cluster {c_id}</div>'
-        legend_html += "</div>"
-
-        return f"""
-        <div class="chart-container">
-            <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <rect x="0" y="0" width="100" height="100" fill="#fafafa" rx="4" />
-                <!-- Axes -->
-                <line x1="{padding}" y1="{100-padding}" x2="{100-padding}" y2="{100-padding}" class="chart-axis" />
-                <line x1="{padding}" y1="{padding}" x2="{padding}" y2="{100-padding}" class="chart-axis" />
-
-                {points_svg}
-            </svg>
-            <div style="text-align:center; font-size:0.8em; color:#888; margin-top:5px;">PCA Projection (2D)</div>
-        </div>
-        {legend_html}
-        """
+        """Generate PCA scatter plot SVG using shared utility."""
+        pca_data = self.dataset_info.get("pca_data", [])
+        return generate_pca_scatter_plot(
+            pca_data=pca_data, mode="cluster", title="PCA Projection (2D)"
+        )
 
     def generate(self) -> str:
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
