@@ -45,6 +45,10 @@ reports = [
 cluster = [
     "kneed>=0.8.5",
 ]
+timeseries = [
+    "statsmodels>=0.14.6",
+    "prophet>=1.2.1",
+]
 dev = [
     "pre-commit>=4.0.0",
     "ruff>=0.8.0",
@@ -54,7 +58,7 @@ dev = [
     "pytest-cov>=6.0.0",
 ]
 all = [
-    "ez-automl-lite[onnx,reports,cluster]"
+    "ez-automl-lite[onnx,reports,cluster,timeseries]"
 ]
 
 [tool.setuptools.packages.find]

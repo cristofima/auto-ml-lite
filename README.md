@@ -7,10 +7,10 @@ A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, 
 
 ## ✨ Features
 
-- **3-Line API**: Designed for simplicity and speed across 4 different ML tasks.
+- **3-Line API**: Designed for simplicity and speed across 5 different ML tasks.
 - **Serverless-First**: Optimized for AWS Lambda/Azure Functions and low-memory environments.
 - **Premium Reports**: Professional HTML/CSS reports for all tasks (No external JS or Internet required).
-- **Comprehensive Analytics**: Supports Regression, Classification, Clustering, and Anomaly Detection.
+- **Comprehensive Analytics**: Supports Regression, Classification, Clustering, Anomaly Detection, and Time Series Forecasting.
 - **ONNX Export**: One-click export for cross-platform deployment.
 
 ---
@@ -22,14 +22,15 @@ A lightweight, serverless-optimized AutoML library for Python. Build, evaluate, 
 pip install "ez-automl-lite[all]"
 
 # Or install with specific optional dependencies:
-pip install "ez-automl-lite[onnx]"     # ONNX export support
-pip install "ez-automl-lite[reports]"  # Enhanced EDA reports
-pip install "ez-automl-lite[cluster]"  # DBSCAN automatic eps selection
+pip install "ez-automl-lite[onnx]"       # ONNX export support
+pip install "ez-automl-lite[reports]"    # Enhanced EDA reports
+pip install "ez-automl-lite[cluster]"    # DBSCAN automatic eps selection
+pip install "ez-automl-lite[timeseries]" # Time series forecasting (ARIMA/Prophet)
 ```
 
 ---
 
-## 🚀 The 4 Core Modules
+## 🚀 The 5 Core Modules
 
 ### 1. Regression
 Automated training with residual analysis and error diagnostics.
@@ -63,6 +64,20 @@ aa = AutoAnomaly(contamination=0.05).fit(df)
 aa.report("anomaly_report.html")
 ```
 
+### 5. Time Series Forecasting
+Automated forecasting with ARIMA/SARIMA and Prophet (1.2.1+), including decomposition, stationarity analysis, and 95% confidence intervals.
+```python
+from ez_automl_lite import AutoTimeSeries
+ats = AutoTimeSeries(
+    time_column="date",
+    target_column="sales",
+    forecast_horizon=30,
+    scaling="absmax"  # Optional: 'absmax' or 'minmax'
+).fit(df)
+forecast = ats.predict(30)
+ats.report("timeseries_report.html")
+```
+
 ---
 
 ## 📂 Examples & Scripts
@@ -72,6 +87,8 @@ Check the `examples/` directory for full implementation scripts:
 - `examples/classification_example.py`
 - `examples/clustering_example.py`
 - `examples/anomaly_example.py`
+- `examples/timeseries_example.py`
+- `examples/timeseries_advanced_example.py` (demonstrates scaling and holidays_mode options)
 
 ---
 
