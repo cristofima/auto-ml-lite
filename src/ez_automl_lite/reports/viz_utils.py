@@ -126,7 +126,7 @@ def _generate_anomaly_points(
     legend_html = """
     <div class="legend">
         <div class="legend-item">
-            <div class="legend-dot" style="background: #1a73e8; opacity:0.5;"></div>Normal
+            <div class="legend-dot" style="background: #1a73e8; opacity:0.3;"></div>Normal
         </div>
         <div class="legend-item">
             <div class="legend-dot" style="background: #d93025;"></div>Anomaly
