@@ -19,6 +19,7 @@ from ez_automl_lite.reports.training import generate_training_report
 __all__ = [
     "AutoAnomaly",
     "AutoCluster",
+    "AutoML",
     "AutoPreprocessor",
     "export_model_to_onnx",
     "generate_eda_report",
