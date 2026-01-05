@@ -3,6 +3,9 @@
 from typing import Any, Literal
 
 
+MAX_CLUSTER_COLORS = 8
+
+
 def generate_pca_scatter_plot(
     pca_data: list[dict[str, Any]],
     mode: Literal["cluster", "anomaly"],
@@ -23,8 +26,11 @@ def generate_pca_scatter_plot(
         return "<p>No visualization data available.</p>"
 
     # Extract and normalize coordinates
-    xs = [p["x"] for p in pca_data]
-    ys = [p["y"] for p in pca_data]
+    try:
+        xs = [p["x"] for p in pca_data]
+        ys = [p["y"] for p in pca_data]
+    except KeyError as e:
+        return f"<p>Invalid data structure: missing key {e}</p>"
 
     if not xs or not ys:
         return ""
@@ -86,14 +92,14 @@ def _generate_cluster_points(
         clusters.add(c_id)
         points_svg += (
             f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="3" '
-            f'class="scatter-pt cluster-{c_id % 8}" />'
+            f'class="scatter-pt cluster-{c_id % MAX_CLUSTER_COLORS}" />'
         )
 
     legend_html = '<div class="legend">'
     for c_id in sorted(clusters):
         legend_html += (
             f'<div class="legend-item">'
-            f'<div class="legend-dot cluster-{c_id % 8}"></div>Cluster {c_id}'
+            f'<div class="legend-dot cluster-{c_id % MAX_CLUSTER_COLORS}"></div>Cluster {c_id}'
             f"</div>"
         )
     legend_html += "</div>"

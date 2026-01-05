@@ -43,16 +43,15 @@ def generate_eda_report(
 class EDAReportGenerator:
     """Generate comprehensive EDA report with CSS-only visualizations matching the premium theme."""
 
-    def __init__(
-        self, df: pd.DataFrame, target_column: str | None, task_type: str | None
-    ) -> None:
+    def __init__(self, df: pd.DataFrame, target_column: str | None, task_type: str | None) -> None:
         self.df = df
         self.target_column = target_column
 
         if target_column:
             self.target = df[target_column]
             self.features = df.drop(columns=[target_column])
-            self.problem_type = detect_problem_type(self.target)
+            # Use explicit task_type if provided, otherwise auto-detect
+            self.problem_type = task_type if task_type else detect_problem_type(self.target)
         else:
             self.target = None
             self.features = df
@@ -82,9 +81,7 @@ class EDAReportGenerator:
 
         missing_cols = [col for col in self.df.columns if self.df[col].isnull().any()]
         if missing_cols:
-            self.warnings.append(
-                f"Missing values detected in {len(missing_cols)} column(s)"
-            )
+            self.warnings.append(f"Missing values detected in {len(missing_cols)} column(s)")
 
         if self.problem_type == "classification" and self.target is not None:
             class_counts = self.target.value_counts()
@@ -97,9 +94,7 @@ class EDAReportGenerator:
         elif self.problem_type == "regression" and self.target is not None:
             skew = self.target.skew()
             if abs(skew) > 1:
-                self.warnings.append(
-                    f"High skewness detected ({skew:.2f}) in target variable"
-                )
+                self.warnings.append(f"High skewness detected ({skew:.2f}) in target variable")
 
     def _get_css(self) -> str:
         return """
@@ -150,6 +145,7 @@ class EDAReportGenerator:
             .badge.regression { background: #f3e5f5; color: #7b1fa2; }
             .badge.clustering { background: #e0f2f1; color: #00695c; }
             .badge.anomaly_detection { background: #ffebee; color: #c62828; }
+            .badge.timeseries { background: #fff9c4; color: #f57f17; }
             .badge.numeric { background: #e8f5e9; color: #2e7d32; }
             .badge.categorical { background: #fff3e0; color: #e65100; }
 
@@ -172,7 +168,9 @@ class EDAReportGenerator:
 
         target_info = ""
         if self.target_column:
-            target_info = f"<p><strong>Target Column:</strong> <code>{self.target_column}</code></p>"
+            target_info = (
+                f"<p><strong>Target Column:</strong> <code>{self.target_column}</code></p>"
+            )
 
         return f"""
         <div class="card">
@@ -197,7 +195,7 @@ class EDAReportGenerator:
             </div>
             <div style="margin-top: 20px;">
                 {target_info}
-                <p><strong>Problem Type:</strong> <span class="badge {self.problem_type}">{self.problem_type.replace('_', ' ').upper()}</span></p>
+                <p><strong>Problem Type:</strong> <span class="badge {self.problem_type}">{self.problem_type.replace('_', ' ').upper().replace('TIMESERIES', 'TIME SERIES')}</span></p>
                 <p><strong>Memory Usage:</strong> {memory_mb:.2f} MB</p>
             </div>
         </div>
@@ -211,7 +209,9 @@ class EDAReportGenerator:
         html = '<div class="card">'
 
         # 1. PCA Visualization of Raw Structure
-        html += f'<h2>🧬 Data Structure Analysis ({self.problem_type.replace("_", " ").title()})</h2>'
+        html += (
+            f'<h2>🧬 Data Structure Analysis ({self.problem_type.replace("_", " ").title()})</h2>'
+        )
 
         numeric_df = self.df.select_dtypes(include=[np.number]).fillna(0)
         if len(numeric_df.columns) >= 2:
@@ -284,15 +284,15 @@ class EDAReportGenerator:
             Q1 = df[col].quantile(0.25)
             Q3 = df[col].quantile(0.75)
             IQR = Q3 - Q1
-            outliers = (
-                (df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))
-            ).sum()
+            outliers = ((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))).sum()
             if outliers > 0:
                 html += f"<tr><td>{col}</td><td>{outliers}</td><td>{outliers/len(df)*100:.1f}%</td></tr>"
                 count += 1
 
         if count == 0:
-            html += '<tr><td colspan="3">No significant outliers detected in top features.</td></tr>'
+            html += (
+                '<tr><td colspan="3">No significant outliers detected in top features.</td></tr>'
+            )
         html += "</table>"
         return html
 
@@ -322,9 +322,7 @@ class EDAReportGenerator:
             html = '<div class="mini-chart">'
             for count in counts:
                 height = int((count / max_count) * 40)
-                html += (
-                    f'<div class="mini-bar" style="height: {max(height, 2)}px;"></div>'
-                )
+                html += f'<div class="mini-bar" style="height: {max(height, 2)}px;"></div>'
             html += "</div>"
             return html
         except Exception:
@@ -390,7 +388,7 @@ def generate_minimal_report(df, target, output):
         <body>
             <h1>Error generating full EDA</h1>
             <div>
-                <p>Dataset shape: {n_rows} rows × {n_cols} columns</p>
+                <p>Dataset shape: {n_rows} rows x {n_cols} columns</p>
                 <p>Columns: {col_names}</p>
                 {target_info}
             </div>

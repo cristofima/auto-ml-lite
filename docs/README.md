@@ -7,7 +7,7 @@ See the [Main README](../README.md) for installation and basic usage.
 
 ## 🤖 Supported Tasks
 
-`ez-automl-lite` supports four main types of analysis. Click on each section for detailed information on algorithms, metrics, and reports.
+`ez-automl-lite` supports five main types of analysis. Click on each section for detailed information on algorithms, metrics, and reports.
 
 | Task | Description | Example Use Cases |
 | :--- | :--- | :--- |
@@ -15,6 +15,7 @@ See the [Main README](../README.md) for installation and basic usage.
 | [**Regression**](./REGRESSION.md) | Predict continuous numbers. | House Prices, Sales Forecasting, Temperature. |
 | [**Clustering**](./CLUSTERING.md) | Group similar items (Unsupervised). | Customer Segmentation, Market Basket Analysis. |
 | [**Anomaly Detection**](./ANOMALY_DETECTION.md) | Find rare events/outliers (Unsupervised). | Intrusion Detection, Defect Detection, Fraud. |
+| [**Time Series**](./TIMESERIES.md) | Forecast future values from historical data. | Sales Forecasting, Stock Prices, Demand Planning. |
 
 ## 📊 Core Features
 
