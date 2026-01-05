@@ -49,8 +49,10 @@ def generate_timeseries_report(
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"Time series report saved to: {output_path}")
-    except Exception as e:
-        print(f"Error generating time series report: {e!s}")
+    except OSError as e:
+        print(f"Error writing time series report: {e}")
+    except (ValueError, KeyError, AttributeError) as e:
+        print(f"Error generating time series report (data issue): {e}")
 
 
 class TimeSeriesReportGenerator:
@@ -357,6 +359,14 @@ class TimeSeriesReportGenerator:
         """Generate visual representation of actual vs predicted values."""
         split_idx = len(self.y_train)
         y_all = pd.concat([self.y_train, self.y_test])
+
+        if len(y_all) == 0:
+            return """
+            <div class="card">
+                <h2>📉 Forecast vs Actual</h2>
+                <p>No data available for visualization.</p>
+            </div>
+            """
 
         # Legend
         legend = """

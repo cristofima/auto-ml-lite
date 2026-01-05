@@ -198,7 +198,7 @@ class AutoTimeSeries:
     def _train_prophet(
         self, df_train: pd.DataFrame, df_test: pd.DataFrame
     ) -> tuple[Any, np.ndarray]:
-        """Train Prophet model with Prophet 1.2.1+ features."""
+        """Train Prophet model."""
         if not PROPHET_AVAILABLE:
             raise ImportError(
                 "prophet is required for Prophet algorithm. Install with: pip install 'ez-automl-lite[timeseries]'"
