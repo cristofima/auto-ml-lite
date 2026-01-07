@@ -182,7 +182,8 @@ class AutoTimeSeries:
                     best_aic = fitted.aic
                     best_model = fitted
                     best_order = order
-            except Exception:  # nosec B112
+            except Exception as e:  # nosec B112
+                print(f"Warning: ARIMA order {order} failed with error: {e}")
                 continue
 
         if best_model is None:

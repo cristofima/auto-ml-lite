@@ -319,7 +319,7 @@ class TrainingReportGenerator:
         return html
 
     def _generate_roc_curve(self) -> str:
-        """Generate SVG ROC Curve"""
+        """Generate SVG ROC Curve with axis labels and ticks"""
         if self.y_test is None or self.y_pred_proba is None:
             return ""
         if len(np.unique(self.y_test)) > 2:
@@ -337,9 +337,25 @@ class TrainingReportGenerator:
                 path_d += f"L {f*100:.1f} {(1-t)*100:.1f} "
             path_d += "L 100 0"  # End
 
+            # Generate axis ticks and labels
+            tick_values = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+            tick_labels = ""
+
+            for tick in tick_values:
+                x_pos = tick * 100
+                y_pos = (1 - tick) * 100
+
+                # X-axis ticks
+                tick_labels += f'<line x1="{x_pos}" y1="100" x2="{x_pos}" y2="102" stroke="#666" stroke-width="0.5"/>'
+                tick_labels += f'<text x="{x_pos}" y="106" text-anchor="middle" font-size="4" fill="#666">{tick:.1f}</text>'
+
+                # Y-axis ticks
+                tick_labels += f'<line x1="-2" y1="{y_pos}" x2="0" y2="{y_pos}" stroke="#666" stroke-width="0.5"/>'
+                tick_labels += f'<text x="-4" y="{y_pos+1}" text-anchor="end" font-size="4" fill="#666">{tick:.1f}</text>'
+
             svg = f"""
             <div class="chart-container">
-                <svg class="chart-svg" viewBox="-5 -5 110 115" preserveAspectRatio="none">
+                <svg class="chart-svg" viewBox="-10 -10 120 120" preserveAspectRatio="xMidYMid meet">
                     <!-- Grid -->
                     <line x1="0" y1="0" x2="0" y2="100" class="chart-axis" />
                     <line x1="0" y1="100" x2="100" y2="100" class="chart-axis" />
@@ -347,13 +363,18 @@ class TrainingReportGenerator:
                     <line x1="100" y1="0" x2="100" y2="100" class="chart-axis" stroke-dasharray="2,2" />
                     <line x1="0" y1="100" x2="100" y2="0" class="chart-axis" stroke-dasharray="2,2" stroke="#ccc" />
 
-                    <!-- Labels -->
-                    <text x="50" y="112" text-anchor="middle" class="chart-label">False Positive Rate</text>
-                    <text x="-5" y="55" text-anchor="middle" transform="rotate(-90, -5, 55)" class="chart-label">True Positive Rate</text>
+                    <!-- Ticks and tick labels -->
+                    {tick_labels}
+
+                    <!-- Axis labels -->
+                    <text x="50" y="113" text-anchor="middle" font-size="4" fill="#333" font-weight="600">False Positive Rate</text>
+                    <text x="-6" y="50" text-anchor="middle" font-size="4" fill="#333" font-weight="600" transform="rotate(-90, -6, 50)">True Positive Rate</text>
 
                     <!-- Curve -->
                     <path d="{path_d}" class="chart-line" />
-                    <text x="60" y="80" style="font-size: 14px; font-weight: bold; fill: #1a73e8;">AUC = {roc_auc:.4f}</text>
+
+                    <!-- AUC Label -->
+                    <text x="60" y="80" style="font-size: 5px; font-weight: bold; fill: #1a73e8;">AUC = {roc_auc:.4f}</text>
                 </svg>
             </div>
             """
