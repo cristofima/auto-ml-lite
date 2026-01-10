@@ -256,8 +256,71 @@ class TrainingReportGenerator:
         html += "</div></div>"
         return html
 
+    def _generate_scatter_plot_svg(self) -> str:
+        """Generate SVG scatter plot: Predicted vs Actual with diagonal reference line"""
+        if self.y_test is None or self.y_pred is None:
+            return ""
+
+        y_true = self.y_test.values if hasattr(self.y_test, "values") else self.y_test
+
+        # Calculate scaling
+        min_val = min(y_true.min(), self.y_pred.min())
+        max_val = max(y_true.max(), self.y_pred.max())
+        range_val = max_val - min_val if max_val != min_val else 1
+        padding = 10
+
+        # Create SVG
+        svg = f'<svg viewBox="-{padding} -{padding} {100 + 2*padding} {100 + 2*padding}" width="100%" style="max-width: 600px; height: 400px; margin: 20px 0;">'
+
+        # Background grid
+        svg += '<defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">'
+        svg += '<path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.3"/>'
+        svg += "</pattern></defs>"
+        svg += f'<rect x="-{padding}" y="-{padding}" width="{100 + 2*padding}" height="{100 + 2*padding}" fill="url(#grid)"/>'
+
+        # Diagonal reference line (perfect prediction)
+        svg += '<line x1="0" y1="100" x2="100" y2="0" stroke="#28a745" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6"/>'
+        svg += '<text x="105" y="5" font-size="4" fill="#28a745" font-weight="bold">Perfect</text>'
+
+        # Plot points
+        for true_val, pred_val in zip(y_true, self.y_pred, strict=True):
+            x = (true_val - min_val) / range_val * 100
+            y = 100 - (pred_val - min_val) / range_val * 100
+            # Color based on error magnitude
+            residual = abs(pred_val - true_val)
+            max_residual = np.max(np.abs(self.y_pred - y_true))
+            error_ratio = residual / max_residual if max_residual > 0 else 0
+            # Gradient from green (good) to red (bad)
+            color = f"hsl({120 * (1 - error_ratio)}, 70%, 50%)"
+            svg += f'<circle cx="{x}" cy="{y}" r="1.2" fill="{color}" opacity="0.7"/>'
+
+        # Axes
+        svg += '<line x1="0" y1="100" x2="100" y2="100" stroke="#333" stroke-width="1"/>'
+        svg += '<line x1="0" y1="100" x2="0" y2="0" stroke="#333" stroke-width="1"/>'
+
+        # Axis ticks and labels
+        for i in range(0, 11, 2):
+            x_pos = i * 10
+            # X-axis ticks
+            svg += f'<line x1="{x_pos}" y1="100" x2="{x_pos}" y2="102" stroke="#666" stroke-width="0.5"/>'
+            val = min_val + (i / 10) * range_val
+            svg += f'<text x="{x_pos}" y="108" font-size="3.5" fill="#666" text-anchor="middle">{val:.2f}</text>'
+            # Y-axis ticks
+            y_pos = 100 - x_pos
+            svg += (
+                f'<line x1="-2" y1="{y_pos}" x2="0" y2="{y_pos}" stroke="#666" stroke-width="0.5"/>'
+            )
+            svg += f'<text x="-4" y="{y_pos + 1}" font-size="3.5" fill="#666" text-anchor="end">{val:.2f}</text>'
+
+        # Axis labels
+        svg += '<text x="50" y="118" font-size="4.5" font-weight="bold" fill="#333" text-anchor="middle">Actual Values</text>'
+        svg += '<text x="-18" y="50" font-size="4.5" font-weight="bold" fill="#333" text-anchor="middle" transform="rotate(-90 -18 50)">Predicted Values</text>'
+
+        svg += "</svg>"
+        return svg
+
     def _generate_regression_diagnostics(self) -> str:
-        """Enhanced regression diagnostics: Residuals distribution and sample table"""
+        """Enhanced regression diagnostics: Predicted vs Actual scatter plot, residuals distribution, and sample table"""
         if self.y_test is None or self.y_pred is None:
             return ""
 
@@ -269,6 +332,12 @@ class TrainingReportGenerator:
         max_count = max(counts) if len(counts) > 0 else 1
 
         html = '<div class="card"><h2>🔬 Regression Diagnostics</h2>'
+
+        # Predicted vs Actual Scatter Plot
+        html += "<h3>Predicted vs Actual Values</h3>"
+        html += '<p style="font-size:0.85em; color:#666;">Points on the green diagonal line indicate perfect predictions. Colors transition from green (accurate) to red (inaccurate).</p>'
+        html += self._generate_scatter_plot_svg()
+
         html += '<div class="grid-2">'
 
         # Residuals Histogram

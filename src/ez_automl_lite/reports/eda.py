@@ -149,7 +149,7 @@ class EDAReportGenerator:
             .badge.numeric { background: #e8f5e9; color: #2e7d32; }
             .badge.categorical { background: #fff3e0; color: #e65100; }
 
-            .mini-chart { display: flex; align-items: flex-end; height: 40px; gap: 2px; }
+            .mini-chart { display: flex; align-items: flex-end; height: 80px; gap: 2px; }
             .mini-bar { background: #667eea; border-radius: 2px 2px 0 0; min-width: 8px; }
 
             /* PCA Plot */
@@ -304,9 +304,43 @@ class EDAReportGenerator:
         if self.problem_type == "classification":
             class_counts = self.target.value_counts()
             total = len(self.target)
-            html += "<h3>Class Distribution</h3><table><tr><th>Class</th><th>Count</th><th>Pct</th></tr>"
+
+            # Calculate class balance indicator
+            imbalance_ratio = (
+                class_counts.max() / class_counts.min() if len(class_counts) > 1 else 1
+            )
+            if imbalance_ratio < 1.5:
+                balance_status = "Balanced"
+                balance_color = "#28a745"
+                balance_bg = "#e8f5e9"
+            elif imbalance_ratio < 3.0:
+                balance_status = "Moderately Imbalanced"
+                balance_color = "#ffc107"
+                balance_bg = "#fff8e1"
+            else:
+                balance_status = "Highly Imbalanced"
+                balance_color = "#dc3545"
+                balance_bg = "#ffebee"
+
+            # Class balance badge
+            html += f"""
+            <div style="margin-bottom: 20px; padding: 15px; border-radius: 8px; background: {balance_bg}; border-left: 4px solid {balance_color};">
+                <h3 style="margin: 0 0 10px 0; color: {balance_color};">⚖️ Class Balance Status</h3>
+                <div style="font-size: 1.3em; font-weight: bold; color: {balance_color};">{balance_status}</div>
+                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Imbalance Ratio: {imbalance_ratio:.2f}:1</div>
+            </div>
+            """
+
+            html += "<h3>Class Distribution</h3><table><tr><th>Class</th><th>Count</th><th>Pct</th><th>Visualization</th></tr>"
             for cls, count in class_counts.items():
-                html += f"<tr><td>{cls}</td><td>{count}</td><td>{count/total*100:.1f}%</td></tr>"
+                pct = count / total * 100
+                bar_width = int((count / class_counts.max()) * 100)
+                html += f"""<tr>
+                    <td>{cls}</td>
+                    <td>{count}</td>
+                    <td>{pct:.1f}%</td>
+                    <td><div class="bar-container"><div class="bar primary" style="width: {bar_width}%;"></div></div></td>
+                </tr>"""
             html += "</table>"
         else:
             stats = self.target.describe()

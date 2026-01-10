@@ -411,8 +411,75 @@ class TimeSeriesReportGenerator:
         </div>
         """
 
+    def _generate_decomp_line_chart(
+        self, data: np.ndarray | pd.Series, title: str, color: str
+    ) -> str:
+        """Generate a simple SVG line chart for decomposition component"""
+        if isinstance(data, pd.Series):
+            values = data.values
+        else:
+            values = data
+
+        if len(values) == 0:
+            return ""
+
+        # Normalize data for plotting
+        min_val = float(np.nanmin(values))
+        max_val = float(np.nanmax(values))
+        range_val = max_val - min_val if max_val != min_val else 1
+
+        # Sample every nth point to keep SVG manageable
+        step = max(1, len(values) // 50)
+        sampled_values = values[::step]
+
+        if len(sampled_values) < 2:
+            return ""
+
+        # Create SVG path
+        svg = '<svg viewBox="0 -10 100 120" width="100%" style="height: 280px; margin: 0;">'
+        svg += (
+            '<defs><linearGradient id="grad-'
+            + color.replace("#", "")
+            + '" x1="0%" y1="0%" x2="0%" y2="100%">'
+        )
+        svg += f'<stop offset="0%" style="stop-color:{color};stop-opacity:0.3" />'
+        svg += f'<stop offset="100%" style="stop-color:{color};stop-opacity:0.01" />'
+        svg += "</linearGradient></defs>"
+
+        # Draw grid background
+        svg += '<rect x="0" y="0" width="100" height="100" fill="#f8f9fa" stroke="#e0e0e0" stroke-width="0.5"/>'
+
+        # Generate path
+        path_d = f"M 0 {100 - (sampled_values[0] - min_val) / range_val * 100} "
+        for i, val in enumerate(sampled_values[1:], 1):
+            x = (i / (len(sampled_values) - 1)) * 100
+            y = 100 - (val - min_val) / range_val * 100
+            path_d += f"L {x} {y} "
+
+        # Draw filled area under curve
+        fill_path = path_d + "L 100 100 L 0 100 Z"
+        svg += f'<path d="{fill_path}" fill="url(#grad-' + color.replace("#", "") + ')"/>'
+
+        # Draw line
+        svg += f'<path d="{path_d}" stroke="{color}" stroke-width="1.5" fill="none" stroke-linecap="round"/>'
+
+        # Add axes
+        svg += '<line x1="0" y1="100" x2="100" y2="100" stroke="#999" stroke-width="0.5"/>'
+        svg += '<line x1="0" y1="0" x2="0" y2="100" stroke="#999" stroke-width="0.5"/>'
+
+        # Axis labels
+        svg += '<text x="50" y="115" font-size="3" fill="#666" text-anchor="middle">Time</text>'
+        svg += '<text x="-5" y="50" font-size="3" fill="#666" text-anchor="end" transform="rotate(-90 -5 50)">Value</text>'
+
+        # Min/Max labels
+        svg += f'<text x="2" y="105" font-size="2.5" fill="#999">{min_val:.2f}</text>'
+        svg += f'<text x="2" y="8" font-size="2.5" fill="#999">{max_val:.2f}</text>'
+
+        svg += "</svg>"
+        return svg
+
     def _get_decomposition(self) -> str:
-        """Display time series decomposition if available."""
+        """Display time series decomposition if available with line chart visualizations."""
         if not self.decomposition:
             return ""
 
@@ -428,28 +495,48 @@ class TimeSeriesReportGenerator:
         seasonal_mean = float(seasonal.mean()) if not pd.isna(seasonal.mean()) else 0
         residual_std = float(residual.std()) if not pd.isna(residual.std()) else 0
 
+        # Generate line charts
+        trend_chart = self._generate_decomp_line_chart(trend, "Trend", "#1a73e8")
+        seasonal_chart = self._generate_decomp_line_chart(seasonal, "Seasonal", "#34a853")
+        residual_chart = self._generate_decomp_line_chart(residual, "Residual", "#ea4335")
+
         return f"""
         <div class="card">
             <h2>🔍 Time Series Decomposition</h2>
-            <p>Decomposition breaks down the time series into three components:</p>
-            <div class="decomposition-grid">
-                <div class="decomp-card">
-                    <h3>📈 Trend Component</h3>
-                    <p>Long-term progression of the series</p>
-                    <div class="info-value">{trend_mean:.4f}</div>
-                    <div class="info-label">Mean Trend</div>
+            <p>Decomposition breaks down the time series into three components: trend (long-term direction), seasonal (repeating patterns), and residual (random noise).</p>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+                <!-- Trend Component -->
+                <div style="background: #f8f9ff; border: 1px solid #e0e0ff; border-radius: 8px; padding: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1a73e8; font-size: 1em;">📈 Trend</h4>
+                    <p style="font-size: 0.85em; color: #666; margin: 0 0 10px 0;">Long-term direction</p>
+                    {trend_chart}
+                    <div style="text-align: center; padding: 10px; background: #f0f4ff; border-radius: 6px; margin-top: 10px;">
+                        <div style="font-size: 1.1em; font-weight: bold; color: #1a73e8;">{trend_mean:.2f}</div>
+                        <div style="font-size: 0.8em; color: #666;">Mean</div>
+                    </div>
                 </div>
-                <div class="decomp-card">
-                    <h3>🔄 Seasonal Component</h3>
-                    <p>Repeating patterns over fixed periods</p>
-                    <div class="info-value">{seasonal_mean:.4f}</div>
-                    <div class="info-label">Mean Seasonality</div>
+
+                <!-- Seasonal Component -->
+                <div style="background: #f8fff8; border: 1px solid #e0ffe0; border-radius: 8px; padding: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #34a853; font-size: 1em;">🔄 Seasonal</h4>
+                    <p style="font-size: 0.85em; color: #666; margin: 0 0 10px 0;">Repeating patterns</p>
+                    {seasonal_chart}
+                    <div style="text-align: center; padding: 10px; background: #f0fff0; border-radius: 6px; margin-top: 10px;">
+                        <div style="font-size: 1.1em; font-weight: bold; color: #34a853;">{seasonal_mean:.2f}</div>
+                        <div style="font-size: 0.8em; color: #666;">Mean</div>
+                    </div>
                 </div>
-                <div class="decomp-card">
-                    <h3>📊 Residual Component</h3>
-                    <p>Random noise after removing trend and seasonality</p>
-                    <div class="info-value">{residual_std:.4f}</div>
-                    <div class="info-label">Std Deviation</div>
+
+                <!-- Residual Component -->
+                <div style="background: #fff8f8; border: 1px solid #ffe0e0; border-radius: 8px; padding: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #ea4335; font-size: 1em;">📊 Residual</h4>
+                    <p style="font-size: 0.85em; color: #666; margin: 0 0 10px 0;">Random noise</p>
+                    {residual_chart}
+                    <div style="text-align: center; padding: 10px; background: #fff0f0; border-radius: 6px; margin-top: 10px;">
+                        <div style="font-size: 1.1em; font-weight: bold; color: #ea4335;">{residual_std:.2f}</div>
+                        <div style="font-size: 0.8em; color: #666;">Std Dev</div>
+                    </div>
                 </div>
             </div>
         </div>
