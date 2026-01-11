@@ -420,8 +420,16 @@ class TimeSeriesReportGenerator:
         else:
             values = data
 
-        if len(values) == 0:
+        values = np.asarray(values, dtype=float)
+        if values.size == 0:
             return ""
+
+        # Fill/interpolate NaNs to avoid invalid SVG paths.
+        s = pd.Series(values)
+        if s.isna().all():
+            return ""
+
+        values = s.interpolate(limit_direction="both").ffill().bfill().to_numpy()
 
         # Normalize data for plotting
         min_val = float(np.nanmin(values))

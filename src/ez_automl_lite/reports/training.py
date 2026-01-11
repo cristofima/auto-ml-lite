@@ -261,16 +261,29 @@ class TrainingReportGenerator:
         if self.y_test is None or self.y_pred is None:
             return ""
 
-        y_true = self.y_test.values if hasattr(self.y_test, "values") else self.y_test
+        y_true = np.asarray(
+            self.y_test.values if hasattr(self.y_test, "values") else self.y_test
+        ).ravel()
+        y_pred = np.asarray(self.y_pred).ravel()
+        if y_true.size == 0 or y_pred.size == 0:
+            return ""
+        if y_true.shape[0] != y_pred.shape[0]:
+            return ""
 
         # Calculate scaling
-        min_val = min(y_true.min(), self.y_pred.min())
-        max_val = max(y_true.max(), self.y_pred.max())
+        min_val = float(min(y_true.min(), y_pred.min()))
+        max_val = float(max(y_true.max(), y_pred.max()))
         range_val = max_val - min_val if max_val != min_val else 1
-        padding = 10
+        padding = 20
+        extra_bottom = 30  # room for tick labels + axis label
+        max_residual = float(np.max(np.abs(y_pred - y_true))) if y_true.size else 0.0
 
         # Create SVG
-        svg = f'<svg viewBox="-{padding} -{padding} {100 + 2*padding} {100 + 2*padding}" width="100%" style="max-width: 600px; height: 400px; margin: 20px 0;">'
+        svg_h = 100 + 2 * padding + extra_bottom
+        svg = (
+            f'<svg viewBox="-{padding} -{padding} {100 + 2*padding} {svg_h}" '
+            'width="100%" style="max-width: 600px; height: 400px; margin: 20px 0;">'
+        )
 
         # Background grid
         svg += '<defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">'
@@ -283,12 +296,11 @@ class TrainingReportGenerator:
         svg += '<text x="105" y="5" font-size="4" fill="#28a745" font-weight="bold">Perfect</text>'
 
         # Plot points
-        for true_val, pred_val in zip(y_true, self.y_pred, strict=True):
+        for true_val, pred_val in zip(y_true, y_pred, strict=True):
             x = (true_val - min_val) / range_val * 100
             y = 100 - (pred_val - min_val) / range_val * 100
             # Color based on error magnitude
             residual = abs(pred_val - true_val)
-            max_residual = np.max(np.abs(self.y_pred - y_true))
             error_ratio = residual / max_residual if max_residual > 0 else 0
             # Gradient from green (good) to red (bad)
             color = f"hsl({120 * (1 - error_ratio)}, 70%, 50%)"
@@ -424,7 +436,7 @@ class TrainingReportGenerator:
 
             svg = f"""
             <div class="chart-container">
-                <svg class="chart-svg" viewBox="-10 -10 120 120" preserveAspectRatio="xMidYMid meet">
+                <svg class="chart-svg" viewBox="-10 -20 120 140" preserveAspectRatio="xMidYMid meet">
                     <!-- Grid -->
                     <line x1="0" y1="0" x2="0" y2="100" class="chart-axis" />
                     <line x1="0" y1="100" x2="100" y2="100" class="chart-axis" />

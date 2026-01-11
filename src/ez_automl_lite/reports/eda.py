@@ -2,6 +2,7 @@
 EDA (Exploratory Data Analysis) Report Generator.
 """
 
+import html as html5
 from datetime import UTC, datetime
 
 import numpy as np
@@ -333,10 +334,11 @@ class EDAReportGenerator:
 
             html += "<h3>Class Distribution</h3><table><tr><th>Class</th><th>Count</th><th>Pct</th><th>Visualization</th></tr>"
             for cls, count in class_counts.items():
+                cls_esc = html5.escape(str(cls))
                 pct = count / total * 100
                 bar_width = int((count / class_counts.max()) * 100)
                 html += f"""<tr>
-                    <td>{cls}</td>
+                    <td>{cls_esc}</td>
                     <td>{count}</td>
                     <td>{pct:.1f}%</td>
                     <td><div class="bar-container"><div class="bar primary" style="width: {bar_width}%;"></div></div></td>
@@ -355,7 +357,7 @@ class EDAReportGenerator:
             max_count = max(counts) if len(counts) > 0 and max(counts) > 0 else 1
             html = '<div class="mini-chart">'
             for count in counts:
-                height = int((count / max_count) * 40)
+                height = int((count / max_count) * 80)
                 html += f'<div class="mini-bar" style="height: {max(height, 2)}px;"></div>'
             html += "</div>"
             return html
