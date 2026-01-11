@@ -10,14 +10,16 @@ def generate_pca_scatter_plot(
     pca_data: list[dict[str, Any]],
     mode: Literal["cluster", "anomaly"],
     title: str = "PCA Projection (2D)",
+    explained_variance: tuple[float, float] | None = None,
 ) -> str:
     """
-    Generate PCA scatter plot SVG.
+    Generate PCA scatter plot SVG with axis labels and ticks.
 
     Args:
         pca_data: List of points with 'x', 'y', and mode-specific label
         mode: Visualization mode - 'cluster' for cluster data, 'anomaly' for anomaly detection
         title: Plot title/caption
+        explained_variance: Tuple of (PC1 %, PC2 %) explained variance ratios
 
     Returns:
         HTML string with SVG chart and legend
@@ -56,13 +58,43 @@ def generate_pca_scatter_plot(
             pca_data, min_x, min_y, range_x, range_y, padding, width, height
         )
 
+    # Generate axis tick labels with actual data range
+    x_ticks = ""
+    y_ticks = ""
+    tick_positions = [0, 0.25, 0.5, 0.75, 1.0]
+
+    for pos in tick_positions:
+        # X-axis ticks
+        x_val = min_x + (pos * range_x)
+        x_coord = padding + (pos * width)
+        x_ticks += f'<line x1="{x_coord}" y1="{100-padding}" x2="{x_coord}" y2="{100-padding+2}" stroke="#666" stroke-width="0.5"/>'
+        x_ticks += f'<text x="{x_coord}" y="{100-padding+5}" text-anchor="middle" font-size="3" fill="#666">{x_val:.2f}</text>'
+
+        # Y-axis ticks
+        y_val = min_y + (pos * range_y)
+        y_coord = 100 - (padding + (pos * height))
+        y_ticks += f'<line x1="{padding-2}" y1="{y_coord}" x2="{padding}" y2="{y_coord}" stroke="#666" stroke-width="0.5"/>'
+        y_ticks += f'<text x="{padding-4}" y="{y_coord+1}" text-anchor="end" font-size="3" fill="#666">{y_val:.2f}</text>'
+
+    # Add axis labels with explained variance
+    pc1_label = f"PC1 ({explained_variance[0]:.1f}%)" if explained_variance else "PC1"
+    pc2_label = f"PC2 ({explained_variance[1]:.1f}%)" if explained_variance else "PC2"
+
+    axis_labels = f"""
+        <text x="50" y="98" text-anchor="middle" font-size="4" fill="#333" font-weight="600">{pc1_label}</text>
+        <text x="2" y="50" text-anchor="middle" font-size="4" fill="#333" font-weight="600" transform="rotate(-90, 2, 50)">{pc2_label}</text>
+    """
+
     return f"""
     <div class="chart-container">
-        <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg class="chart-svg" viewBox="-5 -5 110 110" preserveAspectRatio="xMidYMid meet">
             <rect x="0" y="0" width="100" height="100" fill="#fafafa" rx="4" />
             <!-- Axes -->
             <line x1="{padding}" y1="{100-padding}" x2="{100-padding}" y2="{100-padding}" class="chart-axis" />
             <line x1="{padding}" y1="{padding}" x2="{padding}" y2="{100-padding}" class="chart-axis" />
+            {x_ticks}
+            {y_ticks}
+            {axis_labels}
             {points_svg}
         </svg>
         <div style="text-align:center; font-size:0.8em; color:#888; margin-top:5px;">{title}</div>

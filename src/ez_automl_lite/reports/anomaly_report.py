@@ -128,7 +128,16 @@ class AnomalyReportGenerator:
     def _generate_pca_plot(self) -> str:
         """Generate PCA scatter plot SVG using shared utility."""
         pca_data = self.dataset_info.get("pca_data", [])
-        return generate_pca_scatter_plot(pca_data=pca_data, mode="anomaly")
+        explained_var_list = self.dataset_info.get("pca_explained_variance", [])
+
+        # Convert to tuple of percentages if available
+        explained_variance = None
+        if explained_var_list and len(explained_var_list) >= 2:
+            explained_variance = (explained_var_list[0] * 100, explained_var_list[1] * 100)
+
+        return generate_pca_scatter_plot(
+            pca_data=pca_data, mode="anomaly", explained_variance=explained_variance
+        )
 
     def generate(self) -> str:
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")

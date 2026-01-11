@@ -106,12 +106,8 @@ class AutoAnomaly:
         anomaly_indices = np.where(labels == -1)[0]
         # Sort by score (lower is more anomalous)
         if len(anomaly_indices) > 0:
-            top_anomaly_indices = anomaly_indices[np.argsort(scores[anomaly_indices])][
-                :10
-            ]
-            self.metrics["top_anomalies_samples"] = df.iloc[
-                top_anomaly_indices
-            ].to_dict("records")
+            top_anomaly_indices = anomaly_indices[np.argsort(scores[anomaly_indices])][:10]
+            self.metrics["top_anomalies_samples"] = df.iloc[top_anomaly_indices].to_dict("records")
             self.metrics["top_anomalies_scores"] = scores[top_anomaly_indices].tolist()
         else:
             self.metrics["top_anomalies_samples"] = []
@@ -143,6 +139,7 @@ class AutoAnomaly:
                 {"x": float(coord[0]), "y": float(coord[1]), "label": int(label)}
                 for coord, label in zip(coords, labels, strict=True)
             ]
+            self.dataset_info["pca_explained_variance"] = pca.explained_variance_ratio_.tolist()
 
         except Exception as e:
             print(f"PCA calculation failed: {e}")

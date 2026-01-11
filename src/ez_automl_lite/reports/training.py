@@ -256,8 +256,83 @@ class TrainingReportGenerator:
         html += "</div></div>"
         return html
 
+    def _generate_scatter_plot_svg(self) -> str:
+        """Generate SVG scatter plot: Predicted vs Actual with diagonal reference line"""
+        if self.y_test is None or self.y_pred is None:
+            return ""
+
+        y_true = np.asarray(
+            self.y_test.values if hasattr(self.y_test, "values") else self.y_test
+        ).ravel()
+        y_pred = np.asarray(self.y_pred).ravel()
+        if y_true.size == 0 or y_pred.size == 0:
+            return ""
+        if y_true.shape[0] != y_pred.shape[0]:
+            return ""
+
+        # Calculate scaling
+        min_val = float(min(y_true.min(), y_pred.min()))
+        max_val = float(max(y_true.max(), y_pred.max()))
+        range_val = max_val - min_val if max_val != min_val else 1
+        padding = 20
+        extra_bottom = 30  # room for tick labels + axis label
+        max_residual = float(np.max(np.abs(y_pred - y_true))) if y_true.size else 0.0
+
+        # Create SVG
+        svg_h = 100 + 2 * padding + extra_bottom
+        svg = (
+            f'<svg viewBox="-{padding} -{padding} {100 + 2*padding} {svg_h}" '
+            'width="100%" style="max-width: 600px; height: 400px; margin: 20px 0;">'
+        )
+
+        # Background grid
+        svg += '<defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">'
+        svg += '<path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.3"/>'
+        svg += "</pattern></defs>"
+        svg += f'<rect x="-{padding}" y="-{padding}" width="{100 + 2*padding}" height="{100 + 2*padding}" fill="url(#grid)"/>'
+
+        # Diagonal reference line (perfect prediction)
+        svg += '<line x1="0" y1="100" x2="100" y2="0" stroke="#28a745" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6"/>'
+        svg += '<text x="105" y="5" font-size="4" fill="#28a745" font-weight="bold">Perfect</text>'
+
+        # Plot points
+        for true_val, pred_val in zip(y_true, y_pred, strict=True):
+            x = (true_val - min_val) / range_val * 100
+            y = 100 - (pred_val - min_val) / range_val * 100
+            # Color based on error magnitude
+            residual = abs(pred_val - true_val)
+            error_ratio = residual / max_residual if max_residual > 0 else 0
+            # Gradient from green (good) to red (bad)
+            color = f"hsl({120 * (1 - error_ratio)}, 70%, 50%)"
+            svg += f'<circle cx="{x}" cy="{y}" r="1.2" fill="{color}" opacity="0.7"/>'
+
+        # Axes
+        svg += '<line x1="0" y1="100" x2="100" y2="100" stroke="#333" stroke-width="1"/>'
+        svg += '<line x1="0" y1="100" x2="0" y2="0" stroke="#333" stroke-width="1"/>'
+
+        # Axis ticks and labels
+        for i in range(0, 11, 2):
+            x_pos = i * 10
+            # X-axis ticks
+            svg += f'<line x1="{x_pos}" y1="100" x2="{x_pos}" y2="102" stroke="#666" stroke-width="0.5"/>'
+            val = min_val + (i / 10) * range_val
+            svg += f'<text x="{x_pos}" y="108" font-size="3.5" fill="#666" text-anchor="middle">{val:.2f}</text>'
+            # Y-axis ticks
+            y_pos = 100 - x_pos
+            svg += (
+                f'<line x1="-2" y1="{y_pos}" x2="0" y2="{y_pos}" stroke="#666" stroke-width="0.5"/>'
+            )
+            svg += f'<text x="-4" y="{y_pos + 1}" font-size="3.5" fill="#666" text-anchor="end">{val:.2f}</text>'
+
+        # Axis labels
+        svg += '<text x="50" y="118" font-size="4.5" font-weight="bold" fill="#333" text-anchor="middle">Actual Values</text>'
+        svg += '<text x="-18" y="50" font-size="4.5" font-weight="bold" fill="#333" text-anchor="middle" transform="rotate(-90 -18 50)">Predicted Values</text>'
+
+        svg += "</svg>"
+        return svg
+
     def _generate_regression_diagnostics(self) -> str:
-        """Enhanced regression diagnostics: Residuals distribution and sample table"""
+        """Enhanced regression diagnostics: Predicted vs Actual scatter plot, residuals distribution, and sample table"""
         if self.y_test is None or self.y_pred is None:
             return ""
 
@@ -269,6 +344,12 @@ class TrainingReportGenerator:
         max_count = max(counts) if len(counts) > 0 else 1
 
         html = '<div class="card"><h2>🔬 Regression Diagnostics</h2>'
+
+        # Predicted vs Actual Scatter Plot
+        html += "<h3>Predicted vs Actual Values</h3>"
+        html += '<p style="font-size:0.85em; color:#666;">Points on the green diagonal line indicate perfect predictions. Colors transition from green (accurate) to red (inaccurate).</p>'
+        html += self._generate_scatter_plot_svg()
+
         html += '<div class="grid-2">'
 
         # Residuals Histogram
@@ -319,7 +400,7 @@ class TrainingReportGenerator:
         return html
 
     def _generate_roc_curve(self) -> str:
-        """Generate SVG ROC Curve"""
+        """Generate SVG ROC Curve with axis labels and ticks"""
         if self.y_test is None or self.y_pred_proba is None:
             return ""
         if len(np.unique(self.y_test)) > 2:
@@ -337,9 +418,25 @@ class TrainingReportGenerator:
                 path_d += f"L {f*100:.1f} {(1-t)*100:.1f} "
             path_d += "L 100 0"  # End
 
+            # Generate axis ticks and labels
+            tick_values = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+            tick_labels = ""
+
+            for tick in tick_values:
+                x_pos = tick * 100
+                y_pos = (1 - tick) * 100
+
+                # X-axis ticks
+                tick_labels += f'<line x1="{x_pos}" y1="100" x2="{x_pos}" y2="102" stroke="#666" stroke-width="0.5"/>'
+                tick_labels += f'<text x="{x_pos}" y="106" text-anchor="middle" font-size="4" fill="#666">{tick:.1f}</text>'
+
+                # Y-axis ticks
+                tick_labels += f'<line x1="-2" y1="{y_pos}" x2="0" y2="{y_pos}" stroke="#666" stroke-width="0.5"/>'
+                tick_labels += f'<text x="-4" y="{y_pos+1}" text-anchor="end" font-size="4" fill="#666">{tick:.1f}</text>'
+
             svg = f"""
             <div class="chart-container">
-                <svg class="chart-svg" viewBox="-5 -5 110 115" preserveAspectRatio="none">
+                <svg class="chart-svg" viewBox="-10 -20 120 140" preserveAspectRatio="xMidYMid meet">
                     <!-- Grid -->
                     <line x1="0" y1="0" x2="0" y2="100" class="chart-axis" />
                     <line x1="0" y1="100" x2="100" y2="100" class="chart-axis" />
@@ -347,13 +444,18 @@ class TrainingReportGenerator:
                     <line x1="100" y1="0" x2="100" y2="100" class="chart-axis" stroke-dasharray="2,2" />
                     <line x1="0" y1="100" x2="100" y2="0" class="chart-axis" stroke-dasharray="2,2" stroke="#ccc" />
 
-                    <!-- Labels -->
-                    <text x="50" y="112" text-anchor="middle" class="chart-label">False Positive Rate</text>
-                    <text x="-5" y="55" text-anchor="middle" transform="rotate(-90, -5, 55)" class="chart-label">True Positive Rate</text>
+                    <!-- Ticks and tick labels -->
+                    {tick_labels}
+
+                    <!-- Axis labels -->
+                    <text x="50" y="113" text-anchor="middle" font-size="4" fill="#333" font-weight="600">False Positive Rate</text>
+                    <text x="-6" y="50" text-anchor="middle" font-size="4" fill="#333" font-weight="600" transform="rotate(-90, -6, 50)">True Positive Rate</text>
 
                     <!-- Curve -->
                     <path d="{path_d}" class="chart-line" />
-                    <text x="60" y="80" style="font-size: 14px; font-weight: bold; fill: #1a73e8;">AUC = {roc_auc:.4f}</text>
+
+                    <!-- AUC Label -->
+                    <text x="60" y="80" style="font-size: 5px; font-weight: bold; fill: #1a73e8;">AUC = {roc_auc:.4f}</text>
                 </svg>
             </div>
             """
