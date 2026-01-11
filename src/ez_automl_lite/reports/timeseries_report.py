@@ -411,9 +411,7 @@ class TimeSeriesReportGenerator:
         </div>
         """
 
-    def _generate_decomp_line_chart(
-        self, data: np.ndarray | pd.Series, title: str, color: str
-    ) -> str:
+    def _generate_decomp_line_chart(self, data: np.ndarray | pd.Series, color: str) -> str:
         """Generate a simple SVG line chart for decomposition component"""
         if isinstance(data, pd.Series):
             values = data.values
@@ -429,7 +427,7 @@ class TimeSeriesReportGenerator:
         if s.isna().all():
             return ""
 
-        values = s.interpolate(limit_direction="both").ffill().bfill().to_numpy()
+        values = s.interpolate(limit_direction="both").to_numpy()
 
         # Normalize data for plotting
         min_val = float(np.nanmin(values))
@@ -504,9 +502,9 @@ class TimeSeriesReportGenerator:
         residual_std = float(residual.std()) if not pd.isna(residual.std()) else 0
 
         # Generate line charts
-        trend_chart = self._generate_decomp_line_chart(trend, "Trend", "#1a73e8")
-        seasonal_chart = self._generate_decomp_line_chart(seasonal, "Seasonal", "#34a853")
-        residual_chart = self._generate_decomp_line_chart(residual, "Residual", "#ea4335")
+        trend_chart = self._generate_decomp_line_chart(trend, "#1a73e8")
+        seasonal_chart = self._generate_decomp_line_chart(seasonal, "#34a853")
+        residual_chart = self._generate_decomp_line_chart(residual, "#ea4335")
 
         return f"""
         <div class="card">
